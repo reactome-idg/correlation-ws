@@ -57,21 +57,8 @@ public class Archs4Loader
 		this.filePath = filePath;
 	}
 	
-//	private void changeToNextFile(int fileNum, Writer out, BufferedWriter writer) throws IOException
-//	{
-//		Files.move(Paths.get(PATH_TO_TMP_FILE), Paths.get(PATH_TO_TMP_FILE + "_" + fileNum));
-////		writer.close();
-////		out.close();
-//		out = new FileWriter(PATH_TO_TMP_FILE, false);
-//		writer = new BufferedWriter(out);
-//	}
-	
 	public void loadData() throws Exception
 	{
-		
-//		Writer out = new FileWriter(PATH_TO_TMP_FILE);
-		
-		
 		try(FileInputStream fis = new FileInputStream(this.filePath);
 			Scanner scanner = new Scanner(fis);)
 		{
@@ -82,7 +69,7 @@ public class Archs4Loader
 				String[] allGeneSymbols = new String[parts.length-1];
 				for (int i = 1; i < parts.length; i++)
 				{
-					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", ""); //substring(1, parts[i].length() - 1);
+					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", "");
 				}
 
 				System.out.println(allGeneSymbols.length + " gene symbols in the header.");
@@ -90,8 +77,6 @@ public class Archs4Loader
 				System.out.println( maxPairs + " possible gene-pair correlations.");
 				
 				final LocalDateTime startTime = LocalDateTime.now();
-//				LocalDateTime cycleStartTime = startTime;
-//				AtomicInteger cycleCount = new AtomicInteger(0);
 				AtomicInteger linesInFile = new AtomicInteger(0);
 				AtomicInteger fileNum = new AtomicInteger(0);
 				String tempFileName = PATH_TO_TMP_FILE;
@@ -102,44 +87,25 @@ public class Archs4Loader
 				archs4Provenance.setCategory("Pairwise pearson correlation of genes across expression samples.");
 				archs4Provenance.setSubcategory("Human genes");
 				
-//				GeneCorrelationDAO dao = new GeneCorrelationDAOImpl();
-				
 				Provenance provenanceToUse = dao.addProvenance(archs4Provenance);
-//				dao.setCurrentProvenance(provenanceToUse);
 				AtomicInteger recordCount = new AtomicInteger(0);
 				int lineStartOffset = 1;
 				
 				int numWorkers = 1;
 				
-//				ForkJoinPool pool = new ForkJoinPool(numWorkers);
-//				Collection<Callable<?>> tasks = new ArrayList<>(numWorkers);
 				Writer out = new FileWriter(tempFileName, false);
 				BufferedWriter writer = new BufferedWriter(out);
 				while (scanner.hasNext())
 				{
-//					if (lineStartOffset%10 == 0)
-//					{
-//						System.out.println("lineOffset: "+lineStartOffset);
-//					}
 					
 					String line = scanner.nextLine();
 					parts = line.split(",");
 					String currentGeneSymbol = parts[0].substring(1, parts[0].length()-1);
 
 					
-//					if (Duration.between(cycleStartTime, LocalDateTime.now()).toMinutes() >= 3)
-//					{
-//						System.out.println("Resting for a few moments, letting the database catch up.");
-//						Thread.sleep(30 * 1000);
-//						cycleStartTime = LocalDateTime.now();
-//						cycleCount.set(0);
-//					}
-//					final LocalDateTime rateStartTime = cycleStartTime;
-
-					
 					for (int j = 1; j <= numWorkers; j++)
 					{
-						// define the range of values each worker will operate on.
+						// define the range of values each worker will operate on. This was more useful when there were multiple worker threads reading the file.
 						int lineWidth = parts.length - lineStartOffset;
 						int segmentWidth = lineWidth / numWorkers;
 						final int startIndex = lineStartOffset + (j * segmentWidth) - segmentWidth;
@@ -150,138 +116,66 @@ public class Archs4Loader
 											);
 //						System.out.println("Worker #"+j + " startIndex : "+startIndex + " endIndex: "+endIndex + " Segment width: "+segmentWidth + " Line width: "+lineWidth);
 						final List<String> subParts = Collections.synchronizedList(Arrays.asList(Arrays.copyOfRange(parts, startIndex, endIndex)));
-//						Callable<Void> task = new Callable<Void>()
-//						{
-//							long localLineCount = 0 ; 
-							
-//							@Override
-//							public Void call() throws Exception
-//							{
-								GeneCorrelationDAO dao1;
-								int i = -1;
-								try
-								{
-									dao1 = (GeneCorrelationDAO) daoPool.getTarget();
-									dao1.setCurrentProvenance(provenanceToUse);
-									dao1.setBatchSize(100000);
-									// Iterate through the values in the defined range.
-									for (i = startIndex; i < endIndex; i++)
-									{
-										int lookupIndex = i - 1;
-										String correlationValue = "";
-										correlationValue = subParts.get(i-startIndex);
-										String otherGeneSymbol = allGeneSymbols[lookupIndex];
-										String key = DataRepository.generateKey(currentGeneSymbol, otherGeneSymbol);
-										String keyParts[] = key.split("\\|");
-										String g1 = keyParts[0];
-										String g2 = keyParts[1];
-										// if we're at the end, set the batchsize to 1 to trigger commit of the remainder.
-										if (i == endIndex - 1)
-										{
-											dao1.setBatchSize(1);
-										}
-//										dao1.addGenePair(g1 , g2, Double.valueOf(correlationValue));
-//										synchronized(writer)
-										{
-//											localLineCount ++;
-											writer.write("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
-										}
-										
-//										synchronized (recordCount)
-										{
-											int count = recordCount.incrementAndGet();
-											int lineCount = linesInFile.incrementAndGet();
-//											int cCount = cycleCount.incrementAndGet();
-											if (count % 1000000 == 0)
-											{
-												System.out.println(count/1000000 + "M gene-pairs loaded. Accumulative rate (gene-pairs / second): " + (count * 1.0) / (Duration.between(startTime, LocalDateTime.now()).toMillis()/1000) );
-												writer.flush();
-											}
-											if (lineCount % CHUNK_SIZE == 0 || maxPairs - lineCount < CHUNK_SIZE)
-											{
-												// Now it's time to load the file to the database.
-												writer.flush();
-//												dao.loadGenePairsFromDataFile(PATH_TO_TMP_FILE);
-//												changeToNextFile(fileNum.getAndIncrement(), out, writer);
-												dao.loadGenePairsFromDataFile(tempFileName);
-												Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
-												out = new FileWriter(tempFileName, false);
-												writer = new BufferedWriter(out);
-											}
-										}
-									}
-//									System.out.println("I wrote "+localLineCount+" lines");
-									daoPool.releaseTarget(dao1);
-//									return null;
-								}
-								catch (ArrayIndexOutOfBoundsException e)
-								{
-									System.out.println("ArrayOutOfBounds: startIndex: "+startIndex+" endIndex: "+endIndex+" i: "+i);
-									e.printStackTrace();
-									writer.close();
-									throw e;
-								}
-								catch (Exception e)
-								{
-									e.printStackTrace();
-									writer.close();
-									throw e;
-								}
-								
-//							}
-//						};
-//						tasks.add(task);
-					}
-//					pool.invokeAll(tasks);
-					writer.flush();
-					// this removes all old tasks
-//					tasks.clear();
-					/*
-					for (int i = lineStartOffset; i < parts.length; i++)
-					{
-						int lookupIndex = i - 1;
-						String correlationValue = "";
-						correlationValue = parts[i];
-						
-						// Get the other gene symbol for this position in the line.
-						String otherGeneSymbol = allGeneSymbols[lookupIndex];
-						String key = DataRepository.generateKey(currentGeneSymbol, otherGeneSymbol);
-//						final Double correlationAsDouble = Double.valueOf(correlationValue);
-//						if (!correlationValues.containsKey(key))
-//						if (!jedis.exists(key))
-//						{
-							String keyParts[] = key.split("\\|");
-							String g1 = keyParts[0];
-							String g2 = keyParts[1];
-//							try
-//							{
-//								dao.addGenePair(g1 , g2, Double.valueOf(correlationValue));
-								
-								GeneCorrelationDAO dao1 = (GeneCorrelationDAO) daoPool.getTarget();
-								dao1.setCurrentProvenance(provenanceToUse);
-								dao1.addGenePair(g1 , g2, Double.valueOf(correlationValue));
-//							}
-//							catch (ConstraintViolationException e)
-//							{
-//								// no-op
-//							}
-							
-//							correlationValues.put(key, correlationAsDouble);
-//							jedis.set(key, correlationValue);
-							c++;
-							if (c % 10000 == 0 )
+
+						GeneCorrelationDAO dao1;
+						int i = -1;
+						try
+						{
+							dao1 = (GeneCorrelationDAO) daoPool.getTarget();
+							dao1.setCurrentProvenance(provenanceToUse);
+							dao1.setBatchSize(100000);
+							// Iterate through the values in the defined range.
+							for (i = startIndex; i < endIndex; i++)
 							{
-//								System.out.println(jedis.dbSize() + " gene-pairs loaded.");
-								System.out.println(c + " gene-pairs loaded.");
+								int lookupIndex = i - 1;
+								String correlationValue = "";
+								correlationValue = subParts.get(i-startIndex);
+								String otherGeneSymbol = allGeneSymbols[lookupIndex];
+								String key = DataRepository.generateKey(currentGeneSymbol, otherGeneSymbol);
+								String keyParts[] = key.split("\\|");
+								String g1 = keyParts[0];
+								String g2 = keyParts[1];
+								// if we're at the end, set the batchsize to 1 to trigger commit of the remainder.
+								if (i == endIndex - 1)
+								{
+									dao1.setBatchSize(1);
+								}
+								writer.write("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
+								int count = recordCount.incrementAndGet();
+								int lineCount = linesInFile.incrementAndGet();
+								if (count % 1000000 == 0)
+								{
+									System.out.println(count/1000000 + "M gene-pairs loaded. Accumulative rate (gene-pairs / second): " + (count * 1.0) / (Duration.between(startTime, LocalDateTime.now()).toMillis()/1000) );
+									writer.flush();
+								}
+								if (lineCount % CHUNK_SIZE == 0 || maxPairs - lineCount < CHUNK_SIZE)
+								{
+									// Now it's time to load the file to the database.
+									writer.flush();
+									dao.loadGenePairsFromDataFile(tempFileName);
+									Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
+									out = new FileWriter(tempFileName, false);
+									writer = new BufferedWriter(out);
+								}
 							}
-//						}
-						// If by some chance this key has already been seen (possibly because of a duplicated identifier), append the correlation value.
-//						else 
-//						{
-//							System.out.println("Whoa! The GeneSymbol key " + key + " has already been seen, with value: " + jedis.get(key) );
-//						}
+							daoPool.releaseTarget(dao1);
+						}
+						catch (ArrayIndexOutOfBoundsException e)
+						{
+							System.out.println("ArrayOutOfBounds: startIndex: "+startIndex+" endIndex: "+endIndex+" i: "+i);
+							e.printStackTrace();
+							writer.close();
+							throw e;
+						}
+						catch (Exception e)
+						{
+							e.printStackTrace();
+							writer.close();
+							throw e;
+						}
 					}
-					*/
+					writer.flush();
+
 					lineStartOffset++;
 				}
 				writer.close();
@@ -290,9 +184,6 @@ public class Archs4Loader
 				// Now that we're done, print out the elapsed time and number of keys loaded.
 //				System.out.println(correlationValues.keySet().size() + " gene-pair keys (Gene Symbol) have been loaded.");
 				System.out.println(Duration.between(startTime, endTime).toString() + " time spent loading the data.");
-				
-				// Now, load the file into MySQL
-//				dao.loadGenePairsFromDataFile(PATH_TO_TMP_FILE);
 			}
 		}
 	}	
