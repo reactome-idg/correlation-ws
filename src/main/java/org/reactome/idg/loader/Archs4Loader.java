@@ -2,22 +2,16 @@ package org.reactome.idg.loader;
 
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.reactome.idg.DataRepository;
@@ -117,8 +111,8 @@ public class Archs4Loader
 				
 				int numWorkers = 1;
 				
-				ForkJoinPool pool = new ForkJoinPool(numWorkers);
-				Collection<Callable<?>> tasks = new ArrayList<>(numWorkers);
+//				ForkJoinPool pool = new ForkJoinPool(numWorkers);
+//				Collection<Callable<?>> tasks = new ArrayList<>(numWorkers);
 				Writer out = new FileWriter(tempFileName, false);
 				BufferedWriter writer = new BufferedWriter(out);
 				while (scanner.hasNext())
@@ -238,10 +232,10 @@ public class Archs4Loader
 //						};
 //						tasks.add(task);
 					}
-					pool.invokeAll(tasks);
+//					pool.invokeAll(tasks);
 					writer.flush();
 					// this removes all old tasks
-					tasks.clear();
+//					tasks.clear();
 					/*
 					for (int i = lineStartOffset; i < parts.length; i++)
 					{
