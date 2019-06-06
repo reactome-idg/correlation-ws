@@ -11,7 +11,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 import org.reactome.idg.loader.HarmonizomeLoader;
-
+import org.reactome.idg.model.Provenance;
 
 public class TestHarmonizomeDataRepository
 {

@@ -2,6 +2,7 @@ package org.reactome.idg;
 
 import java.util.List;
 import java.util.Map;
+import org.reactome.idg.model.Provenance;
 
 /**
  * Interface for a Reactome-IDG data repository. A repository can contain a collection of datasets, identified by their provenance.

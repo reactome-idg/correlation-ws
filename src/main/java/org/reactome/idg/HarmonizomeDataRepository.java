@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import org.reactome.idg.model.Provenance;
 
 import org.reactome.idg.loader.HarmonizomeLoader;
 
@@ -17,7 +18,7 @@ public class HarmonizomeDataRepository implements DataRepository
 {
 
 	// A mapping of a Provenance to a loader.
-	private Map<Provenance, HarmonizomeLoader> dataLoaders;
+	private Map<org.reactome.idg.model.Provenance, HarmonizomeLoader> dataLoaders;
 	// A mapping of Provenance to actual data.
 	private Map<Provenance, TreeMap<String,List<Double>>> dataByGeneSymbol = new TreeMap<>();
 	private Map<Provenance, TreeMap<String,List<Double>>> dataByUniprotAccession = new TreeMap<>();;

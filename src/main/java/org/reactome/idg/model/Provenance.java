@@ -45,6 +45,18 @@ public class Provenance implements Serializable
 //	@OneToMany(mappedBy = "provenance_id")
 //	Set<GenePairCorrelation> correlations;
 	
+	public Provenance(String name, String URL, String category, String subcategory)
+	{
+		this.setName(name);
+		this.setUrl(URL);
+		this.setCategory(category);
+		this.setSubcategory(subcategory);
+	}
+
+	public Provenance()
+	{
+	}
+
 	public String getName()
 	{
 		return name;
@@ -89,7 +101,8 @@ public class Provenance implements Serializable
 		return id;
 	}
 
-	public void setId(long id) {
+	public void setId(long id)
+	{
 		this.id = id;
 	}
 	
