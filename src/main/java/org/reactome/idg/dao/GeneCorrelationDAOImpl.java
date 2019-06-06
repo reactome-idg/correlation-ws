@@ -90,64 +90,48 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 		// Executing a commit EVERY time a record is added is very slow. Executing a commit after some large number
 		// of INSERTs speeds things up considerably.
 		
-//		try(Session session = sessionFactory.openSession();)
+			
+		if (session == null || !session.isOpen())
 		{
-//			session = sessionFactory.getCurrentSession();
-			
-			if (session == null || !session.isOpen())
-			{
-				session = sessionFactory.openSession();
-			}
-			else
-			{
-//				if (!session.isOpen())
-//				{
-//					session = sessionFactory.getCurrentSession();
-//				}
-			}
-			
-			session.setHibernateFlushMode(FlushMode.COMMIT);
-
-			GenePairCorrelation correlation = new GenePairCorrelation(gene1, gene2, correlationValue, this.currentProvenance);
-			try
-			{
-				if (this.numTxOps == 0)
-				{
-					this.addGeneTx = session.beginTransaction();
-				}
-				session.save(correlation);
-				this.numTxOps++;
-
-				// commit when we've executed enough operations.
-				if (this.numTxOps > this.batchSize - 1)
-				{
-					this.numTxOps = 0;
-					addGeneTx.commit();
-				}
-			}
-			catch (ConstraintViolationException e)
-			{
-				if (this.addGeneTx.isActive())
-				{
-					addGeneTx.rollback();
-				}
-				if (e.getCause().getMessage().contains("Duplicate entry") && e.getCause().getMessage().contains("idx_gene_pair_provenance"))
-				{
-					System.out.println("It looks like the gene-pair " + gene1 + "," + gene2 + " has already been loaded for that provenance (ID: "+this.currentProvenance.getId()+").");
-				}
-//				throw e;
-			}
-			catch (Exception e)
-			{
-				e.printStackTrace();
-				throw e;
-			}
-//			finally
-//			{
-//				session.flush();
-//				session.clear();
-//			}
+			session = sessionFactory.openSession();
 		}
+		
+		session.setHibernateFlushMode(FlushMode.COMMIT);
+
+		GenePairCorrelation correlation = new GenePairCorrelation(gene1, gene2, correlationValue, this.currentProvenance);
+		try
+		{
+			if (this.numTxOps == 0)
+			{
+				this.addGeneTx = session.beginTransaction();
+			}
+			session.save(correlation);
+			this.numTxOps++;
+
+			// commit when we've executed enough operations.
+			if (this.numTxOps > this.batchSize - 1)
+			{
+				this.numTxOps = 0;
+				addGeneTx.commit();
+			}
+		}
+		catch (ConstraintViolationException e)
+		{
+			if (this.addGeneTx.isActive())
+			{
+				addGeneTx.rollback();
+			}
+			if (e.getCause().getMessage().contains("Duplicate entry") && e.getCause().getMessage().contains("idx_gene_pair_provenance"))
+			{
+				System.out.println("It looks like the gene-pair " + gene1 + "," + gene2 + " has already been loaded for that provenance (ID: "+this.currentProvenance.getId()+").");
+			}
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+			throw e;
+		}
+		
 	}
 
 	/**
@@ -157,54 +141,41 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 	@Transactional
 	public Provenance addProvenance(Provenance p)
 	{
-		
 		Provenance createdProvenance;
 		
-//		try(Session session = sessionFactory.getCurrentSession();)
+		session = sessionFactory.getCurrentSession();
+		
+		if (!session.isOpen())
 		{
-			session = sessionFactory.getCurrentSession();
-			
-			if (!session.isOpen())
-			{
-				session = sessionFactory.openSession();
-			}
-			
-//			session.setHibernateFlushMode(FlushMode.COMMIT);
-			// Before we try to persis this, let's make sure that it's not already there.
-			@SuppressWarnings("unchecked")
-			List<Provenance> results = session.createQuery("from Provenance where name = :name and url = :url and category = :cat and subcategory = :subcat")
-												.setParameter("name", p.getName())
-												.setParameter("url", p.getUrl())
-												.setParameter("cat", p.getCategory())
-												.setParameter("subcat", p.getSubcategory())
-												.getResultList();
-			
-//			Transaction txn;
-//			if (session.getTransaction().isActive())
-//			{
-//				txn = session.getTransaction();
-//			}
-//			else
-//			{
-//				txn = session.beginTransaction();
-//			}
-			if (null == results || results.size() == 0)
-			{
-				
-				Long createdProvenanceId;
-//				session.clear();
-				createdProvenanceId = (Long) session.save(p);
-				createdProvenance = (Provenance) session.createQuery("from Provenance where id = :id")
-														.setParameter("id", createdProvenanceId)
-														.getResultList().get(0);
-//				txn.commit();
-			}
-			else
-			{
-				System.out.println("Provenance already exists, and will not be recreated.");
-				createdProvenance = results.get(0);
-			}
+			session = sessionFactory.openSession();
 		}
+		
+//			session.setHibernateFlushMode(FlushMode.COMMIT);
+		// Before we try to persis this, let's make sure that it's not already there.
+		@SuppressWarnings("unchecked")
+		List<Provenance> results = session.createQuery("from Provenance where name = :name and url = :url and category = :cat and subcategory = :subcat")
+											.setParameter("name", p.getName())
+											.setParameter("url", p.getUrl())
+											.setParameter("cat", p.getCategory())
+											.setParameter("subcat", p.getSubcategory())
+											.getResultList();
+		
+
+		if (null == results || results.size() == 0)
+		{
+			
+			Long createdProvenanceId;
+			createdProvenanceId = (Long) session.save(p);
+			createdProvenance = (Provenance) session.createQuery("from Provenance where id = :id")
+													.setParameter("id", createdProvenanceId)
+													.getResultList().get(0);
+		}
+		else
+		{
+			System.out.println("Provenance already exists, and will not be recreated.");
+			createdProvenance = results.get(0);
+		}
+		
 		return createdProvenance;
 	}
 	
