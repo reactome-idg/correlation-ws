@@ -148,6 +148,7 @@ public class Archs4Loader
 									System.out.println(count/1000000 + "M gene-pairs loaded. Accumulative rate (gene-pairs / second): " + (count * 1.0) / (Duration.between(startTime, LocalDateTime.now()).toMillis()/1000) );
 									writer.flush();
 								}
+								// The second part of this condition is WRONG, will trigger 1 line per file. FIX!
 								if (lineCount % CHUNK_SIZE == 0 || maxPairs - lineCount < CHUNK_SIZE)
 								{
 									// Now it's time to load the file to the database.
