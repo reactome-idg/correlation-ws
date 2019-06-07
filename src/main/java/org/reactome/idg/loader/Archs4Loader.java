@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.reactome.idg.DataRepository;
 import org.reactome.idg.dao.GeneCorrelationDAO;
 import org.reactome.idg.model.Provenance;
@@ -35,6 +37,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class Archs4Loader
 {
+	private static final Logger logger = LogManager.getLogger();
+	
 	private static final String PATH_TO_TMP_FILE = "/tmp/data_for_idg";
 
 	private static final int CHUNK_SIZE = 1000000;
@@ -72,9 +76,9 @@ public class Archs4Loader
 					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", "");
 				}
 
-				System.out.println(allGeneSymbols.length + " gene symbols in the header.");
+				logger.info("{} gene symbols in the header.", allGeneSymbols.length);
 				int maxPairs = (allGeneSymbols.length * (allGeneSymbols.length + 1))/2;
-				System.out.println( maxPairs + " possible gene-pair correlations.");
+				logger.info("{} possible gene-pair correlations.",  maxPairs);
 				
 				final LocalDateTime startTime = LocalDateTime.now();
 				AtomicInteger linesInFile = new AtomicInteger(0);
@@ -102,8 +106,8 @@ public class Archs4Loader
 					parts = line.split(",");
 					String currentGeneSymbol = parts[0].substring(1, parts[0].length()-1);
 
-					
-					for (int j = 1; j <= numWorkers; j++)
+					int j = 1;
+//					for (int j = 1; j <= numWorkers; j++)
 					{
 						// define the range of values each worker will operate on. This was more useful when there were multiple worker threads reading the file.
 						int lineWidth = parts.length - lineStartOffset;
@@ -145,11 +149,11 @@ public class Archs4Loader
 								int lineCount = linesInFile.incrementAndGet();
 								if (count % 1000000 == 0)
 								{
-									System.out.println(count/1000000 + "M gene-pairs loaded. Accumulative rate (gene-pairs / second): " + (count * 1.0) / (Duration.between(startTime, LocalDateTime.now()).toMillis()/1000) );
+									logger.info("{}M gene-pairs...", count/1000000);
 									writer.flush();
 								}
 								// The second part of this condition is WRONG, will trigger 1 line per file. FIX!
-								if (lineCount % CHUNK_SIZE == 0 || maxPairs - lineCount < CHUNK_SIZE)
+								if (lineCount % CHUNK_SIZE == 0 /* || maxPairs - lineCount < CHUNK_SIZE */)
 								{
 									// Now it's time to load the file to the database.
 									writer.flush();
@@ -163,7 +167,7 @@ public class Archs4Loader
 						}
 						catch (ArrayIndexOutOfBoundsException e)
 						{
-							System.out.println("ArrayOutOfBounds: startIndex: "+startIndex+" endIndex: "+endIndex+" i: "+i);
+							logger.info("ArrayOutOfBounds: startIndex: {} endIndex: {} i: {}", startIndex, endIndex, i);
 							e.printStackTrace();
 							writer.close();
 							throw e;
@@ -176,15 +180,15 @@ public class Archs4Loader
 						}
 					}
 					writer.flush();
-
 					lineStartOffset++;
 				}
+				writer.flush();
+				// load the last file, probably is smaller than CHUNK_SIZE.
+				dao.loadGenePairsFromDataFile(tempFileName);
+				Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
 				writer.close();
-
 				LocalDateTime endTime = LocalDateTime.now();
-				// Now that we're done, print out the elapsed time and number of keys loaded.
-//				System.out.println(correlationValues.keySet().size() + " gene-pair keys (Gene Symbol) have been loaded.");
-				System.out.println(Duration.between(startTime, endTime).toString() + " time spent loading the data.");
+				logger.info("{} time spent loading the data.", Duration.between(startTime, endTime).toString());
 			}
 		}
 	}	

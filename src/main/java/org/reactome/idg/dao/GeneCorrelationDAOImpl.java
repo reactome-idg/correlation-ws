@@ -17,13 +17,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 // Maybe this should also implement org.reactome.idg.DataRepository
 // OR... deprecate org.reactome.idg.DataRepository if we don't need so many different Data Repositories?
 
 @Repository
 public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 {
+	private static final Logger logger = LogManager.getLogger();
+	
 	private Provenance currentProvenance;
 	// These should be configurable...
 	private int numTxOps = 0;
@@ -74,7 +77,7 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 //		this.session.createSQLQuery("SET sql_log_bin ='ON';").executeUpdate();
 		this.session.createSQLQuery("SET global unique_checks=1;").executeUpdate();
 //		this.session.createSQLQuery("SET global innodb_autoinc_lock_mode = 1;").executeUpdate();
-		System.out.println("Number of rows loaded: " + numRows + ", time duration: " + Duration.between(start, end).toString());
+		logger.info("Number of rows loaded: {}, time duration: {}", numRows, Duration.between(start, end).toString());
 	}
 	
 	/**
@@ -123,7 +126,7 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 			}
 			if (e.getCause().getMessage().contains("Duplicate entry") && e.getCause().getMessage().contains("idx_gene_pair_provenance"))
 			{
-				System.out.println("It looks like the gene-pair " + gene1 + "," + gene2 + " has already been loaded for that provenance (ID: "+this.currentProvenance.getId()+").");
+				logger.info("It looks like the gene-pair {},{} has already been loaded for that provenance (ID: {}).", gene1, gene2, this.currentProvenance.getId());
 			}
 		}
 		catch (Exception e)
@@ -172,7 +175,7 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 		}
 		else
 		{
-			System.out.println("Provenance already exists, and will not be recreated.");
+			logger.info("Provenance ({}) already exists, and will not be recreated.", results.get(0).toString());
 			createdProvenance = results.get(0);
 		}
 		

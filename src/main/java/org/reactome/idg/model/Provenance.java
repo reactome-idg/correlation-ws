@@ -106,5 +106,14 @@ public class Provenance implements Serializable
 		this.id = id;
 	}
 	
+	/**
+	 * String representation of a Provenance. Includes the fields: ID, Name, URL. Other fields ommitted for brevity.
+	 */
+	@Override
+	public String toString()
+	{
+		return "ID: " + this.getId() + "; Name: " + this.getName() + "; URL: "+this.getUrl();
+	}
+	
 	//TODO: Add: species, tissue-type, other fields...
 }
