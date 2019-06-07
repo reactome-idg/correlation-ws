@@ -141,6 +141,7 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 
 	/**
 	 * Adds a Provenance object to the database.
+	 * @deprecated See {@link org.reactome.idg.dao.ProvenanceDAO#addProvenance(Provenance)}
 	 */
 	@Override
 	@Transactional
@@ -206,9 +207,9 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 		
 		@SuppressWarnings("unchecked")
 		List<GenePairCorrelation> correlations = session.createQuery("from GenePairCorrelation where gene1 = :g1 AND gene2 = :g2 ")
-									.setParameter("g1", names[0])
-									.setParameter("g2", names[1])
-									.getResultList();
+														.setParameter("g1", names[0])
+														.setParameter("g2", names[1])
+														.getResultList();
 		for (GenePairCorrelation correlation : correlations)
 		{
 			provenanceCorrelationMap.put(correlation.getProvenance(), correlation.getCorrelationValue());
@@ -220,10 +221,28 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 	 * Get the correlation value for a pair of genes for a given Provenance.
 	 */
 	@Override
+	@Transactional(readOnly = true)
 	public Double getCorrelation(String gene1, String gene2, Provenance prov)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		session = sessionFactory.getCurrentSession();
+		
+		if (!session.isOpen())
+		{
+			session = sessionFactory.openSession();
+		}
+		
+		// We don't store both combinations of a gene pair in the database. A gene-pair is stored once, with genes sorted alphabetically.
+		// Before we query, we must sort the gene names...
+		String[] names = {gene1, gene2};
+		Arrays.sort(names);
+		
+		GenePairCorrelation correlation = (GenePairCorrelation) session.createQuery("from GenePairCorrelation where gene1 = :g1 AND gene2 = :g2 AND provenance = :p")
+																		.setParameter("g1", names[0])
+																		.setParameter("g2", names[1])
+																		.setParameter("p", prov)
+																		.getSingleResult();
+		
+		return correlation.getCorrelationValue();
 	}
 
 	@Override

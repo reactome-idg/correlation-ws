@@ -13,6 +13,7 @@ import org.junit.Test;
 import org.reactome.idg.config.AppConfig;
 import org.reactome.idg.dao.GeneCorrelationDAO;
 import org.reactome.idg.dao.GeneCorrelationDAOImpl;
+import org.reactome.idg.dao.ProvenanceDAO;
 import org.reactome.idg.model.Provenance;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -78,6 +79,29 @@ public class TestGeneCorrelationDAOImpl
 			assertTrue(correlations1.get(p1) == 0.311017245661844);
 			
 			assertEquals(correlations1.get(p1), correlations2.get(p2), 0);
+			
+		}
+	}
+	
+	@Test
+	public void testGetCorrelationByProvenanceIT()
+	{
+		// NOTE this test relies on only loading the ARCHS4 dataset.
+		
+		try(AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();)
+		{
+			context.register(AppConfig.class);
+			context.refresh();
+			
+			GeneCorrelationDAO dao = (GeneCorrelationDAO) context.getBean("dao");
+			
+			ProvenanceDAO provenanceDao = (ProvenanceDAO) context.getBean("provenanceDao");
+			
+			Provenance provenance = provenanceDao.getProvenanceById(new Long(1));
+			
+			Double correlationValue = dao.getCorrelation("A1BG", "A1CF", provenance);
+			
+			assertEquals(correlationValue, 0.311017245661844, 0);
 			
 		}
 	}

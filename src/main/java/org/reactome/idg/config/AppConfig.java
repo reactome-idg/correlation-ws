@@ -18,6 +18,7 @@ import java.util.Properties;
 import javax.sql.DataSource;
 
 import org.reactome.idg.dao.GeneCorrelationDAOImpl;
+import org.reactome.idg.dao.ProvenanceDAOImpl;
 import org.reactome.idg.loader.Archs4Loader;
 import org.springframework.aop.target.CommonsPool2TargetSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -119,9 +120,16 @@ public class AppConfig {
 		return dao;
 	}
 	
+	@Bean(name = "provenanceDao")
+	public ProvenanceDAOImpl getProvenanceDao()
+	{
+		ProvenanceDAOImpl dao = new ProvenanceDAOImpl();
+		return dao;
+	}
+	
+	
 	// Not sure it's necessary to pool the DAOs anymore. Was needed when running multiple connections for INSERTS, but with bulk-loading from a file
 	// with a single connection, this might not be needed anymore.
-	
 	@Bean(name = "daoPool")
 	public CommonsPool2TargetSource getDaoPool()
 	{
