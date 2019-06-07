@@ -125,13 +125,9 @@ public class Archs4Loader
 //						System.out.println("Worker #"+j + " startIndex : "+startIndex + " endIndex: "+endIndex + " Segment width: "+segmentWidth + " Line width: "+lineWidth);
 						final List<String> subParts = Collections.synchronizedList(Arrays.asList(Arrays.copyOfRange(parts, startIndex, endIndex)));
 
-//						GeneCorrelationDAO dao1;
 						int i = -1;
 						try
 						{
-//							dao1 = (GeneCorrelationDAO) daoPool.getTarget();
-//							dao1.setCurrentProvenance(provenanceToUse);
-//							dao1.setBatchSize(100000);
 							// Iterate through the values in the defined range.
 							for (i = startIndex; i < endIndex; i++)
 							{
@@ -143,11 +139,7 @@ public class Archs4Loader
 								String keyParts[] = key.split("\\|");
 								String g1 = keyParts[0];
 								String g2 = keyParts[1];
-								// if we're at the end, set the batchsize to 1 to trigger commit of the remainder.
-//								if (i == endIndex - 1)
-//								{
-//									dao1.setBatchSize(1);
-//								}
+
 								writer.write("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
 								int count = recordCount.incrementAndGet();
 								int lineCount = linesInFile.incrementAndGet();
@@ -156,8 +148,8 @@ public class Archs4Loader
 									logger.info("{}M gene-pairs...", count/1000000);
 									writer.flush();
 								}
-								// The second part of this condition is WRONG, will trigger 1 line per file. FIX!
-								if (lineCount % CHUNK_SIZE == 0 /* || maxPairs - lineCount < CHUNK_SIZE */)
+
+								if (lineCount % CHUNK_SIZE == 0)
 								{
 									// Now it's time to load the file to the database.
 									writer.flush();
@@ -167,7 +159,6 @@ public class Archs4Loader
 									writer = new BufferedWriter(out);
 								}
 							}
-//							daoPool.releaseTarget(dao1);
 						}
 						catch (ArrayIndexOutOfBoundsException e)
 						{
