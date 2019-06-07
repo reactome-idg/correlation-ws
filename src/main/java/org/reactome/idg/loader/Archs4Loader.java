@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.reactome.idg.DataRepository;
 import org.reactome.idg.dao.GeneCorrelationDAO;
+import org.reactome.idg.dao.ProvenanceDAO;
 import org.reactome.idg.model.Provenance;
 import org.springframework.aop.target.CommonsPool2TargetSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,9 @@ public class Archs4Loader
 	
 	@Autowired
 	GeneCorrelationDAO dao;
+	
+	@Autowired
+	ProvenanceDAO provenanceDao;
 	
 	@Autowired
 	CommonsPool2TargetSource daoPool;
@@ -90,8 +94,8 @@ public class Archs4Loader
 				archs4Provenance.setUrl("https://amp.pharm.mssm.edu/archs4/download.html");
 				archs4Provenance.setCategory("Pairwise pearson correlation of genes across expression samples.");
 				archs4Provenance.setSubcategory("Human genes");
-				
-				Provenance provenanceToUse = dao.addProvenance(archs4Provenance);
+				Provenance provenanceToUse = provenanceDao.addProvenance(archs4Provenance);
+//				Provenance provenanceToUse = dao.addProvenance(archs4Provenance);
 				AtomicInteger recordCount = new AtomicInteger(0);
 				int lineStartOffset = 1;
 				
@@ -121,13 +125,13 @@ public class Archs4Loader
 //						System.out.println("Worker #"+j + " startIndex : "+startIndex + " endIndex: "+endIndex + " Segment width: "+segmentWidth + " Line width: "+lineWidth);
 						final List<String> subParts = Collections.synchronizedList(Arrays.asList(Arrays.copyOfRange(parts, startIndex, endIndex)));
 
-						GeneCorrelationDAO dao1;
+//						GeneCorrelationDAO dao1;
 						int i = -1;
 						try
 						{
-							dao1 = (GeneCorrelationDAO) daoPool.getTarget();
-							dao1.setCurrentProvenance(provenanceToUse);
-							dao1.setBatchSize(100000);
+//							dao1 = (GeneCorrelationDAO) daoPool.getTarget();
+//							dao1.setCurrentProvenance(provenanceToUse);
+//							dao1.setBatchSize(100000);
 							// Iterate through the values in the defined range.
 							for (i = startIndex; i < endIndex; i++)
 							{
@@ -140,10 +144,10 @@ public class Archs4Loader
 								String g1 = keyParts[0];
 								String g2 = keyParts[1];
 								// if we're at the end, set the batchsize to 1 to trigger commit of the remainder.
-								if (i == endIndex - 1)
-								{
-									dao1.setBatchSize(1);
-								}
+//								if (i == endIndex - 1)
+//								{
+//									dao1.setBatchSize(1);
+//								}
 								writer.write("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
 								int count = recordCount.incrementAndGet();
 								int lineCount = linesInFile.incrementAndGet();
@@ -163,7 +167,7 @@ public class Archs4Loader
 									writer = new BufferedWriter(out);
 								}
 							}
-							daoPool.releaseTarget(dao1);
+//							daoPool.releaseTarget(dao1);
 						}
 						catch (ArrayIndexOutOfBoundsException e)
 						{

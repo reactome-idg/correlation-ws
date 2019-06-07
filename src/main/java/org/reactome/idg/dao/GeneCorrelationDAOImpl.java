@@ -94,7 +94,6 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 		// NOTE: This method is NOT @Transactional because I want to have control over when commits happen.
 		// Executing a commit EVERY time a record is added is very slow. Executing a commit after some large number
 		// of INSERTs speeds things up considerably.
-		
 			
 		if (session == null || !session.isOpen())
 		{
