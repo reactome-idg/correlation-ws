@@ -2,6 +2,8 @@ package org.reactome.idg.dao;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -186,22 +188,39 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 	 * Get all correlations for a pair of gene names.
 	 */
 	@Override
-	public Map<Provenance, Double> queryForCorrelation(String gene1, String gene2)
+	@Transactional(readOnly = true)
+	public Map<Provenance, Double> getCorrelation(String gene1, String gene2)
 	{
-//		Session session = sessionFactory.getCurrentSession();
-//		List<T> correlations = session.createQuery("SELECT * FROM gene_pair_correlation WHERE gene_1 = :g1 AND gene_2 = :g2 ")
-//									.setParameter("g1", gene1)
-//									.setParameter("g2", gene2)
-//									.getResultList();
-//		return correlations;
-		return null;
+		Map<Provenance, Double> provenanceCorrelationMap = new HashMap<>();
+		session = sessionFactory.getCurrentSession();
+		
+		if (!session.isOpen())
+		{
+			session = sessionFactory.openSession();
+		}
+
+		// We don't store both combinations of a gene pair in the database. A gene-pair is stored once, with genes sorted alphabetically.
+		// Before we query, we must sort the gene names...
+		String[] names = {gene1, gene2};
+		Arrays.sort(names);
+		
+		@SuppressWarnings("unchecked")
+		List<GenePairCorrelation> correlations = session.createQuery("from GenePairCorrelation where gene1 = :g1 AND gene2 = :g2 ")
+									.setParameter("g1", names[0])
+									.setParameter("g2", names[1])
+									.getResultList();
+		for (GenePairCorrelation correlation : correlations)
+		{
+			provenanceCorrelationMap.put(correlation.getProvenance(), correlation.getCorrelationValue());
+		}
+		return provenanceCorrelationMap;
 	}
 
 	/**
 	 * Get the correlation value for a pair of genes for a given Provenance.
 	 */
 	@Override
-	public Double queryForCorrelation(String gene1, String gene2, Provenance prov)
+	public Double getCorrelation(String gene1, String gene2, Provenance prov)
 	{
 		// TODO Auto-generated method stub
 		return null;

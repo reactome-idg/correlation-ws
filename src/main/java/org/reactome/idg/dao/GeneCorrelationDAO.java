@@ -14,9 +14,9 @@ public interface GeneCorrelationDAO
 	
 	public Provenance addProvenance(Provenance p);
 	
-	public Map<Provenance, Double> queryForCorrelation(String gene1, String gene2);
+	public Map<Provenance, Double> getCorrelation(String gene1, String gene2);
 	
-	public Double queryForCorrelation(String gene1, String gene2, Provenance prov);
+	public Double getCorrelation(String gene1, String gene2, Provenance prov);
 	
 	public void setBatchSize(int batchSize);
 	
