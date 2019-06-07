@@ -19,7 +19,7 @@ import org.hibernate.id.enhanced.SequenceStyleGenerator;
 @Entity
 @Table(name = "gene_pair_correlation", indexes = { @Index(columnList = "gene_1, gene_2", unique = false),
 													@Index(columnList = "gene_1,gene_2,provenance_id", unique = true, name = "idx_gene_pair_provenance")})
-public class GenePairCorrelation /* implements Identifiable<Long> */
+public class GenePairCorrelation
 {
 //	public GenePairCorrelation()
 //	{
@@ -35,11 +35,6 @@ public class GenePairCorrelation /* implements Identifiable<Long> */
 	}
 	
 	@Id
-//	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "assigned-sequence")
-//	@GenericGenerator(name = "assigned-sequence", strategy = "org.reactome.idg.model.AssignedSequenceStyleGenerator",
-//					parameters = { @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "post_sequence"),
-//									@Parameter(name = SequenceStyleGenerator.INITIAL_PARAM, value = "0"),
-//									@Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1") })
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
@@ -61,7 +56,6 @@ public class GenePairCorrelation /* implements Identifiable<Long> */
 		this.id = id;
 	}
  
-//	@Override
 	public Long getId()
 	{
 		return id;
