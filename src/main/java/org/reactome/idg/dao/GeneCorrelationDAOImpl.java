@@ -139,52 +139,6 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 	}
 
 	/**
-	 * Adds a Provenance object to the database.
-	 * @deprecated See {@link org.reactome.idg.dao.ProvenanceDAO#addProvenance(Provenance)}
-	 */
-	@Override
-	@Transactional
-	public Provenance addProvenance(Provenance p)
-	{
-		Provenance createdProvenance;
-		
-		session = sessionFactory.getCurrentSession();
-		
-		if (!session.isOpen())
-		{
-			session = sessionFactory.openSession();
-		}
-		
-//			session.setHibernateFlushMode(FlushMode.COMMIT);
-		// Before we try to persis this, let's make sure that it's not already there.
-		@SuppressWarnings("unchecked")
-		List<Provenance> results = session.createQuery("from Provenance where name = :name and url = :url and category = :cat and subcategory = :subcat")
-											.setParameter("name", p.getName())
-											.setParameter("url", p.getUrl())
-											.setParameter("cat", p.getCategory())
-											.setParameter("subcat", p.getSubcategory())
-											.getResultList();
-		
-
-		if (null == results || results.size() == 0)
-		{
-			
-			Long createdProvenanceId;
-			createdProvenanceId = (Long) session.save(p);
-			createdProvenance = (Provenance) session.createQuery("from Provenance where id = :id")
-													.setParameter("id", createdProvenanceId)
-													.getResultList().get(0);
-		}
-		else
-		{
-			logger.info("Provenance ({}) already exists, and will not be recreated.", results.get(0).toString());
-			createdProvenance = results.get(0);
-		}
-		
-		return createdProvenance;
-	}
-	
-	/**
 	 * Get all correlations for a pair of gene names.
 	 */
 	@Override

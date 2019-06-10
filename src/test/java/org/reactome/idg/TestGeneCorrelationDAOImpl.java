@@ -31,11 +31,12 @@ public class TestGeneCorrelationDAOImpl
 			context.refresh();
 			
 			GeneCorrelationDAO dao = (GeneCorrelationDAO) context.getBean("dao");
+			ProvenanceDAO provDao = (ProvenanceDAO) context.getBean("provenanceDao");
 			
 			Provenance p = new Provenance();
 			p.setId(1);
 			p.setName("TEST");
-			Provenance p1 = dao.addProvenance(p);
+			Provenance p1 = provDao.addProvenance(p);
 			assertNotNull(p1);
 			dao.loadGenePairsFromDataFile("/tmp/small_data_for_idg");
 		}
