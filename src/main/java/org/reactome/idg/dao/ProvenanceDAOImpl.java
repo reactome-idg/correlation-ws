@@ -34,24 +34,35 @@ public class ProvenanceDAOImpl implements ProvenanceDAO
 			session = sessionFactory.openSession();
 		}
 		
-		Provenance prov = (Provenance) session.createQuery("from Provenance where id = :id")
-											.setParameter("id", id)
-											.getSingleResult();
-		return prov;
+		Provenance provenance = (Provenance) session.createQuery("from Provenance where id = :id")
+													.setParameter("id", id)
+													.getSingleResult();
+		return provenance;
 	}
 
 	@Override
+	@Transactional(readOnly = true)
 	public List<Provenance> getProvenanceByName(String name)
 	{
-		// TODO Auto-generated method stub
-		return null;
+		session = sessionFactory.getCurrentSession();
+		
+		if (!session.isOpen())
+		{
+			session = sessionFactory.openSession();
+		}
+		
+		@SuppressWarnings("unchecked")
+		List<Provenance> provenances = (List<Provenance>) session.createQuery("from Provenance where name = :name")
+																.setParameter("name", name)
+																.getResultList();
+		return provenances;
 	}
 
 	/**
 	 * @see {@link org.reactome.idg.dao.ProvenanceDAO#addProvenance(Provenance)}
 	 */
 	@Override
-	@Transactional
+	@Transactional(readOnly = false)
 	public Provenance addProvenance(Provenance p)
 	{
 		Provenance createdProvenance;
@@ -75,7 +86,6 @@ public class ProvenanceDAOImpl implements ProvenanceDAO
 
 		if (null == results || results.size() == 0)
 		{
-			
 			Long createdProvenanceId;
 			createdProvenanceId = (Long) session.save(p);
 			createdProvenance = (Provenance) session.createQuery("from Provenance where id = :id")

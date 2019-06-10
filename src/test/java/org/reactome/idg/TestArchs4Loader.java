@@ -14,7 +14,7 @@ public class TestArchs4Loader
 
 	@SuppressWarnings("static-method")
 	@Test
-	public void testLoadDataIT() throws IOException
+	public void testLoadDataIT()
 	{
 		try(AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();)
 		{

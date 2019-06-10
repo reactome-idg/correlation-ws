@@ -12,8 +12,6 @@ public interface GeneCorrelationDAO
 	
 	public void addGenePair(String gene1, String gene2, double correlationValue);
 	
-	public Provenance addProvenance(Provenance p);
-	
 	public Map<Provenance, Double> getCorrelation(String gene1, String gene2);
 	
 	public Double getCorrelation(String gene1, String gene2, Provenance prov);
