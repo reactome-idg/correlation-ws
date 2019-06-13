@@ -110,10 +110,12 @@ public class TestH5Loader
 		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		loader.loadGeneNames();
 		loader.loadTissueTypeNames();
-//		int[][] expressionValues = loader.getExpressionValuesforTissue("HeLa ELAVL1/HuR siRNA1 5d");
+		
 		LocalDateTime start = LocalDateTime.now();
-		int[][] expressionValues = loader.getExpressionValuesforTissue("brain");
-//		int[][] expressionValues = loader.getExpressionValuesforTissue("colon");
+//		int[][] expressionValues = loader.getExpressionValuesforTissue("HeLa ELAVL1/HuR siRNA1 5d");
+//		int[][] expressionValues = loader.getExpressionValuesforTissue("brain");
+		int[][] expressionValues = loader.getExpressionValuesforTissue("colon");
+//		int[][] expressionValues = loader.getExpressionValuesforTissue("heart");
 		LocalDateTime end = LocalDateTime.now();
 		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
 
