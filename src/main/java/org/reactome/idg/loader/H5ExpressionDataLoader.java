@@ -1,9 +1,6 @@
 package org.reactome.idg.loader;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -230,9 +227,9 @@ public class H5ExpressionDataLoader
 		logger.info("Number of elements: {}",maxdims[0]);
 		for (int indx = 0; indx < maxdims[0]; indx++)
 		{
-			this.geneIndices.put(str_data[indx].toString(), indx);
+			geneIndices.put(str_data[indx].toString(), indx);
 		}
-		logger.info("Number of genes loaded: {}", this.geneIndices.size());
+		logger.info("Number of genes loaded: {}", geneIndices.size());
 	}
 	
 	public static void loadTissueTypeNames()
