@@ -9,11 +9,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import hdf.hdf5lib.H5;
 import hdf.hdf5lib.HDF5Constants;
 
 public class H5ExpressionDataLoader
 {
+	private static final Logger logger = LogManager.getLogger();
 	// Need a list of all Tissue-type names.
 	private Set<String> tissueTypes = new HashSet<>();
 	// A mapping of gene name to row-index in expression dataset.
@@ -21,30 +25,22 @@ public class H5ExpressionDataLoader
 	// A mapping of indices and the tissue type associated with it.
 	private Map<Integer, String> indexOfTissues = new HashMap<>();
 	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
-	
-	private static final int DIM_Y = 167726;
-	private static final int DIM_X = 4;
-//	int[][] dset_data = new int[DIM_X][DIM_Y];
-	private static final int RANK = 2;
-	private static final int NAME_BUF_SIZE = 128;
-	private static final String ATTRIBUTENAME = "Sample_type";
-	private static final long DIM0 = 10;
-	private static final long DIM1 = 167726;
-	private static final int DATA_WIDTH=233;
+
+	// TODO: NUM_ROWS can probably be queried directly from the file, no need to hard-code it.
 	private static final int NUM_ROWS=167726;
 	private static String FILENAME = "/media/sshorser/data/reactome/IDGFiles/human_matrix.h5";
-//	long[] dims = { DIM0, DIM1 };
 	String[] Xname = new String[1];
+	// Some data-set names we will be using.
 	private final static String expressionDSName = "/data/expression";
 	private final static String genesDSName = "/meta/genes";
 	private final static String tissueDSName = "/meta/Sample_source_name_ch1";
-	
+	// TODO: NUM_GENES_IN_FILE can probably be queried from the file. No need to hard code it.
 	private static final int NUM_GENES_IN_FILE = 35238;
 	
 	public int[][] getExpressionValuesforTissue(String tissue)
 	{
 		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
-		System.out.println("number of samples for tissue ("+tissue+"): " + indicesForTissue.size());
+		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
 		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
 		
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
@@ -65,7 +61,7 @@ public class H5ExpressionDataLoader
 //			}
 			if (geneCount % 100 == 0)
 			{
-				System.out.println(geneCount + " genes processed.");
+				logger.debug("{} genes processed.", geneCount);
 			}
 				
 			expressionValues[geneIndices.get(gene)] = expressionValuesForGene;
@@ -117,7 +113,7 @@ public class H5ExpressionDataLoader
 //		System.out.println("Is selection valid? " + H5.H5Sselect_valid(space_id));
 		if (status < 0)
 		{
-			System.out.println("Error selecting elements! response code: "+status);
+			logger.error("Error selecting elements! response code: {}",status);
 			return null;
 		}
 		int dimx = indicesForTissue.size();
@@ -165,8 +161,6 @@ public class H5ExpressionDataLoader
 		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
 		byte[][] dset_data = new byte[NUM_ROWS][(int) dataWidth];
 		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-//		long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
-//		H5.H5Tset_size(memtype_id, dataWidth);
 		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
 		byte[] tempbuf = new byte[(int) dataWidth];
 		for (int indx = 0; indx < maxdims[0]; indx++)
@@ -178,16 +172,15 @@ public class H5ExpressionDataLoader
 			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
 		}
 		H5.H5Dclose(dataset_id);
-//		H5.H5Tclose(memtype_id);
 		H5.H5Tclose(type_id);
 		H5.H5Sclose(space_id);
 		H5.H5Fclose(file_id);
-		System.out.println("Number of elements: "+maxdims[0]);
+		logger.info("Number of elements: {}",maxdims[0]);
 		for (int indx = 0; indx < maxdims[0]; indx++)
 		{
 			this.geneIndices.put(str_data[indx].toString(), indx);
 		}
-		System.out.println("Number of genes loaded: " + this.geneIndices.size());
+		logger.info("Number of genes loaded: {}", this.geneIndices.size());
 	}
 	
 	public void loadTissueTypeNames()
@@ -202,8 +195,6 @@ public class H5ExpressionDataLoader
 		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
 		byte[][] dset_data = new byte[NUM_ROWS][(int) dataWidth];
 		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-//		long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
-//		H5.H5Tset_size(memtype_id, dataWidth);
 		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
 		byte[] tempbuf = new byte[(int) dataWidth];
 		for (int indx = 0; indx < maxdims[0]; indx++)
@@ -215,11 +206,10 @@ public class H5ExpressionDataLoader
 			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
 		}
 		H5.H5Dclose(dataset_id);
-//		H5.H5Tclose(memtype_id);
 		H5.H5Tclose(type_id);
 		H5.H5Sclose(space_id);
 		H5.H5Fclose(file_id);
-		System.out.println("Number of elements: "+maxdims[0]);
+		logger.info("Number of elements: ", maxdims[0]);
 		for (int indx = 0; indx < maxdims[0]; indx++)
 		{
 			String tissueType = str_data[indx].toString();
@@ -236,7 +226,7 @@ public class H5ExpressionDataLoader
 				this.tissueTypeToIndex.put(tissueType, list);
 			}
 		}
-		System.out.println("Number of distinct elements: "+this.tissueTypes.size());
+		logger.info("Number of distinct elements: {}", this.tissueTypes.size());
 	}
 	
 	public void getExpressionValuesForGene(String geneId)
@@ -249,7 +239,6 @@ public class H5ExpressionDataLoader
 			
 			long type_id = H5.H5Dget_type(dataset_id);
 			System.out.println(type_id);
-			long[] tDims = new long[1];
 			long dataWidth = H5.H5Tget_size(type_id);
 			long space_id = H5.H5Dget_space(dataset_id);
 			long[] dims = new long[2];
@@ -262,12 +251,8 @@ public class H5ExpressionDataLoader
 			if (dataset_id >= 0)
 			{
 				long dcpl_id = H5.H5Dget_create_plist(dataset_id);
-				long[] Xsize = new long[NAME_BUF_SIZE];
 				if (dcpl_id >= 0)
 				{
-//					H5.H5Pget_external(dcpl_id, 0, Xsize.length, Xname, Xsize);
-//					System.out.println(expressionDSName + " is stored in file: " + Xname[0]);
-					
 					if (dataset_id >= 0)
 					{
 						StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
@@ -287,9 +272,9 @@ public class H5ExpressionDataLoader
 						
 						for (int indx = 0; indx < maxdims[0]; indx++)
 						{
-							System.out.println(genesDSName + " [" + indx + "]: " + str_data[indx]);
+							logger.debug("{} [{}]: {}", genesDSName, indx, str_data[indx]);
 						}
-						System.out.println();
+//						System.out.println();
 					}
 				}
 			}
@@ -297,7 +282,6 @@ public class H5ExpressionDataLoader
 			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 			type_id = H5.H5Dget_type(dataset_id);
 			System.out.println(type_id);
-//			String memberIndex = H5.H5Tget_member_name(type_id, 3);
 			System.out.println(H5.H5Tget_tag(type_id));
 		}
 	}
