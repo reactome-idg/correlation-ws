@@ -52,29 +52,30 @@ public class H5ExpressionDataLoader
 		return elementCoords;
 	}
 	
-	
-	public int[][] getExpressionValuesforTissue(String tissue)
+
+	public int[][] getExpressionValuesforTissue2(String tissue)
 	{
 		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
-		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
+//		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
 		
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 		long dset_space_id = H5.H5Dget_space(dataset_id);
 		
-		// Extract the elements for each gene. Since the gaps between the tissue columns is probably not regular enough to work with hyperslabs, we'll just do all
-		// elements for each gene.
-		// NOTE: this is not terribly efficient! To get the data for tissue == "brain", it took over 20 minutes! I think this might need to be done with a 
-		// hyperslab. I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
+		// I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
+		// The only problem is that the output doesn't seem right... :/
 		// Append selections for each gene
-		long[][] allCoords = new long[NUM_GENES_IN_FILE * indicesForTissue.size()][2];
+//		long[][] allCoords = new long[NUM_GENES_IN_FILE * indicesForTissue.size()][2];
 		int geneCount = 0;
 		for (String gene : geneIndices.keySet())
 		{
-			
 			long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndices.get(gene));
-			int status = H5.H5Sselect_elements(dset_space_id, HDF5Constants.H5S_SELECT_APPEND, indicesForTissue.size() , elementCoords);
+			int status = H5.H5Sselect_elements(dset_space_id, HDF5Constants.H5S_SELECT_APPEND, elementCoords.length , elementCoords);
+			if (status < 0)
+			{
+				logger.error("Selection returned an error code: {}", status);
+			}
 //			// copy to "ALL" array
 //			for (int i = 0; i < elementCoords.length; i++)
 //			{
@@ -95,29 +96,57 @@ public class H5ExpressionDataLoader
 		// DimX is how many total indices there were for a tissue.
 		int dimx = indicesForTissue.size();
 		// DimY is how many genes there were (assume all, for all tissues).
-		int dimy = NUM_GENES_IN_FILE; // no longer correct....
-		long[] dims = new long[2];
-		dims[0] = dimy;
-		dims[1] = dimx;
-		long memspace_id = H5.H5Screate_simple(2, dims, dims);
-		int[][] dset_data = new int[dimx][dimy];
-		long type_id = H5.H5Dget_type(dataset_id);
-		H5.H5Dread(dataset_id, type_id, memspace_id, dset_space_id, HDF5Constants.H5P_DEFAULT, dset_data);
-		
+		int dimy = NUM_GENES_IN_FILE;
+//		long[] dims = new long[2];
+//		dims[0] = dimx;
+//		dims[1] = dimy;
+//		long memspace_id = H5.H5Screate_simple(2, dims, dims);
+//		int[][] dset_data = new int[dimx][dimy];
+//		long type_id = H5.H5Dget_type(dataset_id);
+//		H5.H5Dread(dataset_id, type_id, memspace_id, dset_space_id, HDF5Constants.H5P_DEFAULT, dset_data);
+		int[][] dset_data = readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
 		return dset_data;
 	}
+
 	
+
+	public int[][] getExpressionValuesforTissue(String tissue)
+	{
+		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
+		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
+		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
+		
+//		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+//		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+//		long dset_space_id = H5.H5Dget_space(dataset_id);
+		
+		// Extract the elements for each gene. Since the gaps between the tissue columns is probably not regular enough to work with hyperslabs, we'll just do all
+		// elements for each gene.
+		// NOTE: this is not terribly efficient! To get the data for tissue == "brain", it took over 20 minutes! I think this might need to be done with a 
+		// hyperslab. I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
+		int geneCount = 0;
+		for (String gene : geneIndices.keySet())
+		{
+			int[] expressionValuesForGene = getExpressionValuesForGeneAndTissue(gene, tissue);
+			geneCount++;
+			if (geneCount % 100 == 0)
+			{
+				logger.debug("{} genes processed.", geneCount);
+			}
+			expressionValues[geneIndices.get(gene)] = expressionValuesForGene;
+		}
+		return expressionValues;
+	}
+
 	/**
-	 * Gets a list of expression values for a gene/tissue pair. 
+	 * Gets a list of expression values for a gene/tissue pair.
 	 * @param gene
 	 * @param tissue
 	 * @return
 	 */
 	public int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
 	{
-		
-		
 		int geneIndex = geneIndices.get(gene);
 		
 //		String tissue = indexOfTissues.get(geneIndex);
@@ -142,7 +171,7 @@ public class H5ExpressionDataLoader
 //		int status = H5.H5Sselect_hyperslab(space_id, HDF5Constants.H5S_SELECT_SET, start, null, count, block);
 		long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndex);
 		
-		int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, indicesForTissue.size(), elementCoords);
+		int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
 //		System.out.println("Is selection valid? " + H5.H5Sselect_valid(space_id));
 		if (status < 0)
 		{
@@ -151,23 +180,13 @@ public class H5ExpressionDataLoader
 		}
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
-		long type_id = H5.H5Dget_type(dataset_id);
-//		long dataWidth = H5.H5Tget_size(type_id);
-		int[][] dset_data = new int[dimx][dimy];
 		
-//		long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_NATIVE_INT);
-//		long memtype_id = H5.H5Tcopy(type_id);
-//		
-//		H5.H5Tset_size(memtype_id, dataWidth);
-		long[] dims = new long[2];
-		dims[0] = dimx;
-		dims[1] = 1;
-		long memspace_id = H5.H5Screate_simple(2, dims, dims);
-		H5.H5Dread(dataset_id, type_id, memspace_id, space_id, HDF5Constants.H5P_DEFAULT, dset_data);
-		int[] expressionValues = new int[dimx];
-		for (int i = 0; i < dimx; i ++)
+//		long dataWidth = H5.H5Tget_size(type_id);
+		int[][] dset_data = readData(dataset_id, space_id, dimx, dimy);
+		int[] expressionValues = new int[dset_data.length];
+		for (int i = 0; i < dset_data.length; i ++)
 		{
-			for (int j = 0; j < dimy; j++)
+			for (int j = 0; j < dset_data[0].length; j++)
 			{
 				int expressionValue = dset_data[i][j];
 				// If the index is in the tissue type's list, then the expression value can go into the output.
@@ -180,6 +199,27 @@ public class H5ExpressionDataLoader
 		}
 		H5.H5close();
 		return expressionValues;
+	}
+
+
+	private static int[][] readData(long dataset_id, long space_id, int dimx, int dimy)
+	{
+		int[][] dset_data = new int[dimx][dimy];
+		
+//		long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_NATIVE_INT);
+//		long memtype_id = H5.H5Tcopy(type_id);
+//		
+//		H5.H5Tset_size(memtype_id, dataWidth);
+		long[] dims = new long[2];
+		dims[0] = dimx;
+		dims[1] = dimy;
+		long memspace_id = H5.H5Screate_simple(2, dims, null);
+		long type_id = H5.H5Dget_type(dataset_id);
+		H5.H5Dread(dataset_id, type_id, memspace_id, space_id, HDF5Constants.H5P_DEFAULT, dset_data);
+		H5.H5Sclose(memspace_id);
+		H5.H5Tclose(type_id);
+
+		return dset_data;
 	}
 	
 	public void loadGeneNames()

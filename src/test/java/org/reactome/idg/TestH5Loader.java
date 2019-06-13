@@ -110,11 +110,12 @@ public class TestH5Loader
 		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		loader.loadGeneNames();
 		loader.loadTissueTypeNames();
-		
+//		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
+		String tissueName = "HeLa mock knockdown 5d";
 		LocalDateTime start = LocalDateTime.now();
-//		int[][] expressionValues = loader.getExpressionValuesforTissue("HeLa ELAVL1/HuR siRNA1 5d");
+		int[][] expressionValues = loader.getExpressionValuesforTissue(tissueName);
 //		int[][] expressionValues = loader.getExpressionValuesforTissue("brain");
-		int[][] expressionValues = loader.getExpressionValuesforTissue("colon");
+//		int[][] expressionValues = loader.getExpressionValuesforTissue("colon");
 //		int[][] expressionValues = loader.getExpressionValuesforTissue("heart");
 		LocalDateTime end = LocalDateTime.now();
 		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
@@ -125,6 +126,21 @@ public class TestH5Loader
 			for (int j = 0; j < Math.min(10, expressionValues[i].length); j++)
 			{
 				System.out.print(expressionValues[i][j]+"\t");
+			}
+			System.out.print("\n");
+		}
+		
+		start = LocalDateTime.now();
+		int[][] expressionValues2 = loader.getExpressionValuesforTissue2(tissueName);
+		end = LocalDateTime.now();
+		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
+
+		System.out.println("Size: " + expressionValues2.length + " x " + expressionValues2[0].length);
+		for (int i = 0; i < Math.min(10,expressionValues2.length); i++)
+		{
+			for (int j = 0; j < Math.min(10, expressionValues2[i].length); j++)
+			{
+				System.out.print(expressionValues2[i][j]+"\t");
 			}
 			System.out.print("\n");
 		}
