@@ -20,12 +20,12 @@ public class H5ExpressionDataLoader
 {
 	private static final Logger logger = LogManager.getLogger();
 	// Need a list of all Tissue-type names.
-	private Set<String> tissueTypes = new HashSet<>();
+	private static Set<String> tissueTypes = new HashSet<>();
 	// A mapping of gene name to row-index in expression dataset.
-	private Map<String, Integer> geneIndices = new HashMap<>();
+	private static Map<String, Integer> geneIndices = new HashMap<>();
 	// A mapping of indices and the tissue type associated with it.
-	private Map<Integer, String> indexOfTissues = new HashMap<>();
-	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
+	private static Map<Integer, String> indexOfTissues = new HashMap<>();
+	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
 
 	// TODO: NUM_ROWS can probably be queried directly from the file, no need to hard-code it.
 	private static final int NUM_SAMPLES=167726;
@@ -39,9 +39,9 @@ public class H5ExpressionDataLoader
 	private static final int NUM_GENES_IN_FILE = 35238;
 	
 	
-	private long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
+	private static long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
-		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		long[][] elementCoords = new long[indicesForTissue.size()][2];
 		
 		for (int i = 0; i < indicesForTissue.size(); i++)
@@ -53,9 +53,9 @@ public class H5ExpressionDataLoader
 	}
 	
 
-	public int[][] getExpressionValuesforTissue2(String tissue)
+	public static int[][] getExpressionValuesforTissue2(String tissue)
 	{
-		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
 //		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
 		
@@ -66,7 +66,6 @@ public class H5ExpressionDataLoader
 		// I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
 		// The only problem is that the output doesn't seem right... :/
 		// Append selections for each gene
-//		long[][] allCoords = new long[NUM_GENES_IN_FILE * indicesForTissue.size()][2];
 		int geneCount = 0;
 		for (String gene : geneIndices.keySet())
 		{
@@ -76,14 +75,6 @@ public class H5ExpressionDataLoader
 			{
 				logger.error("Selection returned an error code: {}", status);
 			}
-//			// copy to "ALL" array
-//			for (int i = 0; i < elementCoords.length; i++)
-//			{
-//				for (int j = 0; j < elementCoords[i].length; j++)
-//				{
-//					allCoords[geneCount + i][j] = elementCoords[i][j];
-//				}
-//			}
 			
 			geneCount++;
 			if (geneCount % 1000 == 0)
@@ -97,13 +88,7 @@ public class H5ExpressionDataLoader
 		int dimx = indicesForTissue.size();
 		// DimY is how many genes there were (assume all, for all tissues).
 		int dimy = NUM_GENES_IN_FILE;
-//		long[] dims = new long[2];
-//		dims[0] = dimx;
-//		dims[1] = dimy;
-//		long memspace_id = H5.H5Screate_simple(2, dims, dims);
-//		int[][] dset_data = new int[dimx][dimy];
-//		long type_id = H5.H5Dget_type(dataset_id);
-//		H5.H5Dread(dataset_id, type_id, memspace_id, dset_space_id, HDF5Constants.H5P_DEFAULT, dset_data);
+
 		int[][] dset_data = readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
 		return dset_data;
@@ -111,9 +96,9 @@ public class H5ExpressionDataLoader
 
 	
 
-	public int[][] getExpressionValuesforTissue(String tissue)
+	public static int[][] getExpressionValuesforTissue(String tissue)
 	{
-		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
 		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
 		
@@ -128,7 +113,7 @@ public class H5ExpressionDataLoader
 		int geneCount = 0;
 		for (String gene : geneIndices.keySet())
 		{
-			int[] expressionValuesForGene = getExpressionValuesForGeneAndTissue(gene, tissue);
+			int[] expressionValuesForGene = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue(gene, tissue);
 			geneCount++;
 			if (geneCount % 100 == 0)
 			{
@@ -145,7 +130,7 @@ public class H5ExpressionDataLoader
 	 * @param tissue
 	 * @return
 	 */
-	public int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
+	public static int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
 	{
 		int geneIndex = geneIndices.get(gene);
 		
@@ -157,7 +142,7 @@ public class H5ExpressionDataLoader
 //		long dataWidth = H5.H5Tget_size(type_id);
 		
 		
-		List<Integer> indicesForTissue = this.tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 //		int xoffset = indicesForTissue.get(0);
 		
 //		long[] start = { xoffset, geneIndex };
@@ -172,7 +157,6 @@ public class H5ExpressionDataLoader
 		long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndex);
 		
 		int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-//		System.out.println("Is selection valid? " + H5.H5Sselect_valid(space_id));
 		if (status < 0)
 		{
 			logger.error("Error selecting elements! response code: {}",status);
@@ -181,7 +165,6 @@ public class H5ExpressionDataLoader
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
 		
-//		long dataWidth = H5.H5Tget_size(type_id);
 		int[][] dset_data = readData(dataset_id, space_id, dimx, dimy);
 		int[] expressionValues = new int[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
@@ -206,10 +189,6 @@ public class H5ExpressionDataLoader
 	{
 		int[][] dset_data = new int[dimx][dimy];
 		
-//		long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_NATIVE_INT);
-//		long memtype_id = H5.H5Tcopy(type_id);
-//		
-//		H5.H5Tset_size(memtype_id, dataWidth);
 		long[] dims = new long[2];
 		dims[0] = dimx;
 		dims[1] = dimy;
@@ -256,7 +235,7 @@ public class H5ExpressionDataLoader
 		logger.info("Number of genes loaded: {}", this.geneIndices.size());
 	}
 	
-	public void loadTissueTypeNames()
+	public static void loadTissueTypeNames()
 	{
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, tissueDSName, HDF5Constants.H5P_DEFAULT);
@@ -286,23 +265,23 @@ public class H5ExpressionDataLoader
 		for (int indx = 0; indx < maxdims[0]; indx++)
 		{
 			String tissueType = str_data[indx].toString();
-			this.tissueTypes.add(tissueType);
-			this.indexOfTissues.put(indx, tissueType);
-			if (this.tissueTypeToIndex.containsKey(tissueType))
+			tissueTypes.add(tissueType);
+			indexOfTissues.put(indx, tissueType);
+			if (tissueTypeToIndex.containsKey(tissueType))
 			{
-				this.tissueTypeToIndex.get(tissueType).add(indx);
+				tissueTypeToIndex.get(tissueType).add(indx);
 			}
 			else
 			{
 				List<Integer> list = new ArrayList<>();
 				list.add(indx);
-				this.tissueTypeToIndex.put(tissueType, list);
+				tissueTypeToIndex.put(tissueType, list);
 			}
 		}
-		logger.info("Number of distinct elements: {}", this.tissueTypes.size());
+		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
 	
-	public void getExpressionValuesForGene(String geneId)
+	public static void getExpressionValuesForGene(String geneId)
 	{
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		
