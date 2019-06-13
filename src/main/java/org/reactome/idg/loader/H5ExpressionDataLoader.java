@@ -49,6 +49,8 @@ public class H5ExpressionDataLoader
 		
 		// Extract the elements for each gene. Since the gaps between the tissue columns is probably not regular enough to work with hyperslabs, we'll just do all
 		// elements for each gene.
+		// NOTE: this is not terribly efficient! To get the data for tissue == "brain", it took over 20 minutes! I think this might need to be done with a 
+		// hyperslab. I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
 		int geneCount = 0;
 		for (String gene : geneIndices.keySet())
 		{
