@@ -54,7 +54,8 @@ public class H5ExpressionDataLoader
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
-//		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
+		logger.info("Tissue indices: {}", indicesForTissue.toString());
+		int[][] expressionValues = new int[NUM_GENES_IN_FILE][indicesForTissue.size()];
 		
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
@@ -64,31 +65,83 @@ public class H5ExpressionDataLoader
 		// The only problem is that the output doesn't seem right... :/
 		// Append selections for each gene
 		int geneCount = 0;
-		for (String gene : geneIndices.keySet())
+		boolean isFirst = true;
+		int op = HDF5Constants.H5S_SELECT_SET;
+		
+		// Append tissue-sample columns to the hyperslab...
+		for (int tIndex : indicesForTissue)
 		{
-			long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndices.get(gene));
-			int status = H5.H5Sselect_elements(dset_space_id, HDF5Constants.H5S_SELECT_APPEND, elementCoords.length , elementCoords);
+			// Select a column (for a tissue sample) from the first gene to the last.
+			long[] start = { tIndex, 0 };
+			long[] count = { 1, 1 };
+			long[] block = { 1, NUM_GENES_IN_FILE };
+			int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, block);
 			if (status < 0)
 			{
 				logger.error("Selection returned an error code: {}", status);
 			}
-			
-			geneCount++;
-			if (geneCount % 1000 == 0)
+			if (isFirst)
 			{
-				logger.debug("{} genes added to selection.", geneCount);
+				isFirst = false;
+				op = HDF5Constants.H5S_SELECT_OR;
 			}
 		}
 		
+		
+//		for (String gene : geneIndices.keySet())
+//		{
+//			long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndices.get(gene));
+//			
+//			int xoffset = indicesForTissue.get(0);
+//			
+//
+//			
+////			int status = H5.H5Sselect_elements(dset_space_id, op, elementCoords.length , elementCoords);
+//			// Add each coordinate to the hyperslab
+//			for (int i = 0; i < elementCoords.length ; i ++)
+//			{
+//				for (int j = 0; j < elementCoords[i].length ; j ++)
+//				{
+//					long[] start = { elementCoords[i][0], elementCoords[i][1] };
+////					long[] stride = { 1, 1 };
+//					long[] count = { 1, 1 };
+////					long[] block = { indicesForTissue.get(indicesForTissue.size()-1) , 1};
+//					
+//					int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, null);
+//					if (status < 0)
+//					{
+//						logger.error("Selection returned an error code: {}", status);
+//					}
+//				}
+//			}
+//			
+//			if (isFirst)
+//			{
+//				isFirst = false;
+//				op = HDF5Constants.H5S_SELECT_OR;
+//			}
+//			
+//			
+//			
+//			long[] start = new long[2];
+//			long[] end = new long[2];
+//			H5.H5Sget_select_bounds(dset_space_id, start, end);
+//			geneCount++;
+//			if (geneCount % 1000 == 0)
+//			{
+//				logger.debug("{} genes added to selection.", geneCount);
+//			}
+//		}
+		
 		// Now... read the selections into a dataset.
-		// DimX is how many total indices there were for a tissue.
-		int dimx = indicesForTissue.size();
 		// DimY is how many genes there were (assume all, for all tissues).
+		int dimx = indicesForTissue.size();
+		// DimX is how many total indices there were for a tissue.
 		int dimy = NUM_GENES_IN_FILE;
 
-		int[][] dset_data = readData(dataset_id, dset_space_id, dimx, dimy);
+		expressionValues = readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
-		return dset_data;
+		return expressionValues;
 	}
 
 	
@@ -159,6 +212,9 @@ public class H5ExpressionDataLoader
 			logger.error("Error selecting elements! response code: {}",status);
 			return null;
 		}
+		long[] start = new long[2];
+		long[] end = new long[2];
+		H5.H5Sget_select_bounds(space_id, start, end);
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
 		
@@ -275,6 +331,9 @@ public class H5ExpressionDataLoader
 				tissueTypeToIndex.put(tissueType, list);
 			}
 		}
+		
+//		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() <= 5) {logger.info(t);} }) ;
+		
 		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
 	
