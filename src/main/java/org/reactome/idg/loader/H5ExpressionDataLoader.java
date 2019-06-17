@@ -77,7 +77,6 @@ public class H5ExpressionDataLoader
 		// make a list of contiguous blocks.
 		for (int i = 0; i<indicesForTissue.size(); i += blockWidth)
 		{
-//			int j = 0;
 			blockWidth = 1;
 			int initialIndex = indicesForTissue.get(i);
 			int currentIndex = indicesForTissue.get(i);
@@ -89,11 +88,8 @@ public class H5ExpressionDataLoader
 				{
 					blockWidth++;
 					currentIndex = nextIndex;
-//					j++;
 					nextIndex = indicesForTissue.get(i + blockWidth);
 				}
-//				i = j;
-				// Now we know where we started and where we ended... store the starting position and the block-width
 			}
 			else 
 			{
@@ -282,7 +278,7 @@ public class H5ExpressionDataLoader
 //		System.out.println(
 //		tissueTypeToIndex.keySet().parallelStream().map( t -> tissueTypeToIndex.get(t).size()).max(Integer::compareTo)
 //		);
-		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() == 8231) {logger.info(t);} }) ;
+//		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() == 8231) {logger.info(t);} }) ;
 		
 		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
@@ -332,15 +328,14 @@ public class H5ExpressionDataLoader
 						{
 							logger.debug("{} [{}]: {}", genesDSName, indx, str_data[indx]);
 						}
-//						System.out.println();
 					}
 				}
 			}
 			
 			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 			type_id = H5.H5Dget_type(dataset_id);
-			System.out.println(type_id);
-			System.out.println(H5.H5Tget_tag(type_id));
+//			System.out.println(type_id);
+//			System.out.println(H5.H5Tget_tag(type_id));
 		}
 	}
 

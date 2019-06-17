@@ -18,31 +18,31 @@ public class TestH5Loader
 	@Test
 	public void testH5LoaderIT()
 	{
-		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
-		loader.getExpressionValuesForGene("AAA");
+//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
+		H5ExpressionDataLoader.getExpressionValuesForGene("AAA");
 	}
 	
 	@Test
 	public void testH5LoaderTissueTypesIT()
 	{
-		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
-		loader.loadTissueTypeNames();
+//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
+		H5ExpressionDataLoader.loadTissueTypeNames();
 	}
 	
 	@Test
 	public void testH5LoaderGeneNamesIT()
 	{
-		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
-		loader.loadGeneNames();
+//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
+		H5ExpressionDataLoader.loadGeneNames();
 	}
 	
 	@Test
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
-		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
-		loader.loadGeneNames();
-		loader.loadTissueTypeNames();
-		int expressionValues[] = loader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
+//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
+		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadTissueTypeNames();
+		int expressionValues[] = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
@@ -51,7 +51,7 @@ public class TestH5Loader
 		System.out.println("\n");
 		
 		
-		expressionValues = loader.getExpressionValuesForGeneAndTissue("A2MP1", "HeLa ELAVL1/HuR siRNA1 5d");
+		expressionValues = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A2MP1", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
@@ -107,36 +107,34 @@ public class TestH5Loader
 	@Test
 	public void testGetExpressionValuesForTissueAllGenes()
 	{
-		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		H5ExpressionDataLoader.loadGeneNames();
 		H5ExpressionDataLoader.loadTissueTypeNames();
-//		LocalDateTime start, end;
-//		int[][] expressionValues;
+
 //		String tissueName = "LCL-derived iPSC"; //biggest data set!
 //		String tissueName = "HSTL_Spleen";
 		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
-		loadTissueType(loader, tissueName);
+		loadTissueType(tissueName);
 		
 		tissueName = "HeLa mock knockdown 5d";
-		loadTissueType(loader, tissueName);
+		loadTissueType(tissueName);
 		
 		tissueName = "HSTL_Spleen";
-		loadTissueType(loader, tissueName);
+		loadTissueType(tissueName);
 		
 		tissueName = "brain";
-		loadTissueType(loader, tissueName);
+		loadTissueType(tissueName);
 		
 		tissueName = "LCL-derived iPSC";
-		loadTissueType(loader, tissueName);
+		loadTissueType(tissueName);
 	}
 
-	private void loadTissueType(H5ExpressionDataLoader loader, String tissueName)
+	private void loadTissueType(String tissueName)
 	{
 		LocalDateTime start;
 		LocalDateTime end;
 		int[][] expressionValues;
 		start = LocalDateTime.now();
-		expressionValues = loader.getExpressionValuesforTissue(tissueName);
+		expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
 		end = LocalDateTime.now();
 		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
 
