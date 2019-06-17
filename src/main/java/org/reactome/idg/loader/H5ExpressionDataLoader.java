@@ -73,32 +73,33 @@ public class H5ExpressionDataLoader
 		List<List<Integer>> contigBlocks = new ArrayList<>();
 		int maxBlockWidth = 0;
 		int blockCount = 0;
-		// make a list of contiguous blocks
-		for (int i = 0; i<indicesForTissue.size() - 1; )
+		int blockWidth = 1;
+		// make a list of contiguous blocks.
+		for (int i = 0; i<indicesForTissue.size(); i += blockWidth)
 		{
 //			int j = 0;
-			int blockWidth = 1;
+			blockWidth = 1;
 			int initialIndex = indicesForTissue.get(i);
 			int currentIndex = indicesForTissue.get(i);
-//			if (i + 1 < indicesForTissue.size())
+			if (i + blockWidth < indicesForTissue.size())
 			{
 				int nextIndex = indicesForTissue.get(i + 1);
 				// keep adding to the contiguous block, until we get a point where the next index is no longer a part of this block.
-				while (nextIndex - currentIndex == 1 && i + 1 < indicesForTissue.size())
+				while (nextIndex - currentIndex == 1 && i + blockWidth < indicesForTissue.size() - 1)
 				{
 					blockWidth++;
 					currentIndex = nextIndex;
 //					j++;
-					nextIndex = indicesForTissue.get(i + 1);
+					nextIndex = indicesForTissue.get(i + blockWidth);
 				}
 //				i = j;
 				// Now we know where we started and where we ended... store the starting position and the block-width
 			}
-//			else 
-//			{
-//				blockWidth = 1;
-//			}
-			i += blockWidth;
+			else 
+			{
+				blockWidth = 1;
+			}
+			
 			maxBlockWidth = Math.max(blockWidth, maxBlockWidth);
 			blockCount++;
 			List<Integer> currentBlock = Arrays.asList( initialIndex, blockWidth );
@@ -107,12 +108,12 @@ public class H5ExpressionDataLoader
 		logger.info("{} contiguous blocks; max block width: {}", blockCount, maxBlockWidth);
 		
 		// Append tissue-sample columns to the hyperslab...
-		for (int tIndex : indicesForTissue)
+		for (List<Integer> contigBlock : contigBlocks)
 		{
 			// Select a column (for a tissue sample) from the first gene to the last.
-			long[] start = { tIndex, 0 };
+			long[] start = { contigBlock.get(0), 0 };
 			long[] count = { 1, 1 };
-			long[] block = { 1, NUM_GENES_IN_FILE };
+			long[] block = { contigBlock.get(1), NUM_GENES_IN_FILE };
 			int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, block);
 			if (status < 0)
 			{
@@ -199,7 +200,7 @@ public class H5ExpressionDataLoader
 		return dset_data;
 	}
 	
-	public void loadGeneNames()
+	public static void loadGeneNames()
 	{
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);

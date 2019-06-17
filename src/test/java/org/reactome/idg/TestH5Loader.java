@@ -108,17 +108,33 @@ public class TestH5Loader
 	public void testGetExpressionValuesForTissueAllGenes()
 	{
 		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
-		loader.loadGeneNames();
-		loader.loadTissueTypeNames();
-		LocalDateTime start, end;
-		int[][] expressionValues;
-		String tissueName = "LCL-derived iPSC";
+		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadTissueTypeNames();
+//		LocalDateTime start, end;
+//		int[][] expressionValues;
+//		String tissueName = "LCL-derived iPSC"; //biggest data set!
 //		String tissueName = "HSTL_Spleen";
-//		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
-//		String tissueName = "HeLa mock knockdown 5d";
-//		String tissueName = "colon";
-//		String tissueName = "heart";
-//		String tissueName = "brain";
+		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
+		loadTissueType(loader, tissueName);
+		
+		tissueName = "HeLa mock knockdown 5d";
+		loadTissueType(loader, tissueName);
+		
+		tissueName = "HSTL_Spleen";
+		loadTissueType(loader, tissueName);
+		
+		tissueName = "brain";
+		loadTissueType(loader, tissueName);
+		
+		tissueName = "LCL-derived iPSC";
+		loadTissueType(loader, tissueName);
+	}
+
+	private void loadTissueType(H5ExpressionDataLoader loader, String tissueName)
+	{
+		LocalDateTime start;
+		LocalDateTime end;
+		int[][] expressionValues;
 		start = LocalDateTime.now();
 		expressionValues = loader.getExpressionValuesforTissue(tissueName);
 		end = LocalDateTime.now();
