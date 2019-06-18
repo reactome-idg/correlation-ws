@@ -28,7 +28,7 @@ public class H5ExpressionDataLoader
 	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
 
 	// TODO: NUM_ROWS can probably be queried directly from the file, no need to hard-code it.
-	private static final int NUM_SAMPLES=167726;
+	private static int NUM_SAMPLES ;//=167726;
 	private static String FILENAME = "/media/sshorser/data/reactome/IDGFiles/human_matrix.h5";
 	String[] Xname = new String[1];
 	// Some data-set names we will be using.
@@ -36,8 +36,21 @@ public class H5ExpressionDataLoader
 	private final static String genesDSName = "/meta/genes";
 	private final static String tissueDSName = "/meta/Sample_source_name_ch1";
 	// TODO: NUM_GENES_IN_FILE can probably be queried from the file. No need to hard code it.
-	private static final int NUM_GENES_IN_FILE = 35238;
+	private static int NUM_GENES_IN_FILE ;//= 35238;
 	
+	// Static initializer reads number of genes and samples from H5 file.
+	static
+	{
+		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		long[] dims = new long[2];
+		long[] maxdims = new long[2];
+		
+		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		long space_id = H5.H5Dget_space(dataset_id);
+		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
+		NUM_SAMPLES = (int) dims[0]; // You should get ~167k here.
+		NUM_GENES_IN_FILE = (int) dims[1]; // You should get ~35k here.
+	}
 	
 	private static long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
