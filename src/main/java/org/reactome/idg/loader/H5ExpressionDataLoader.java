@@ -27,16 +27,13 @@ public class H5ExpressionDataLoader
 	private static Map<Integer, String> indexOfTissues = new HashMap<>();
 	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
 
-	// TODO: NUM_ROWS can probably be queried directly from the file, no need to hard-code it.
-	private static int NUM_SAMPLES ;//=167726;
+	private static int NUM_SAMPLES ;
 	private static String FILENAME = "/media/sshorser/data/reactome/IDGFiles/human_matrix.h5";
-	String[] Xname = new String[1];
 	// Some data-set names we will be using.
 	private final static String expressionDSName = "/data/expression";
 	private final static String genesDSName = "/meta/genes";
 	private final static String tissueDSName = "/meta/Sample_source_name_ch1";
-	// TODO: NUM_GENES_IN_FILE can probably be queried from the file. No need to hard code it.
-	private static int NUM_GENES_IN_FILE ;//= 35238;
+	private static int NUM_GENES_IN_FILE ;
 	
 	// Static initializer reads number of genes and samples from H5 file.
 	static
