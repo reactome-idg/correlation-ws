@@ -8,7 +8,11 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.junit.Test;
 import org.reactome.idg.loader.H5ExpressionDataLoader;
 
@@ -148,4 +152,90 @@ public class TestH5Loader
 			System.out.print("\n");
 		}
 	}
+	
+
+	@Test
+	public void testCalculateCorrelationIT()
+	{
+		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadTissueTypeNames();
+		LocalDateTime start;
+		LocalDateTime end;
+		int[][] expressionValues;
+		start = LocalDateTime.now();
+		String tissueName = "HSTL_Spleen";
+		expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
+		end = LocalDateTime.now();
+		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
+
+		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
+		for (int i = 0; i < Math.min(10,expressionValues.length); i++)
+		{
+			for (int j = 0; j < Math.min(10, expressionValues[i].length); j++)
+			{
+				System.out.print(expressionValues[i][j]+"\t");
+			}
+			System.out.print("\n");
+		}
+		
+		double[][] dExpressionValues = new double[expressionValues.length][expressionValues[0].length];
+		for (int i = 0; i < expressionValues.length; i++)
+		{
+			for (int j = 0; j < expressionValues[i].length; j++)
+			{
+				dExpressionValues[i][j] = expressionValues[i][j];
+			}
+		}
+		
+		// this really just calculates the correlation for a single tissue, and I'm not 100% sure this is the correct way to do it.
+		start = LocalDateTime.now();
+		PearsonsCorrelation cor = new PearsonsCorrelation(dExpressionValues);
+		RealMatrix corMatrix = cor.getCorrelationMatrix();
+		end = LocalDateTime.now();
+		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
+		System.out.println("Column dimensions: " + corMatrix.getColumnDimension());
+		System.out.println("Row dimensions: " + corMatrix.getRowDimension());
+		
+		for (int i = 0; i < 10; i++)
+		{
+			for (int j = 0; j < 10; j++)
+			{
+				System.out.print(corMatrix.getEntry(i, j)+"\t\t");
+			}
+			System.out.print("\n");
+		}
+	}
+	
+	@Test
+	public void testTissueTypes()
+	{
+		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.getTissueTypes().stream().sorted().collect(Collectors.toList()).forEach(t -> System.out.println(t));
+	}
+//	
+//	@Test
+//	public void testGetTissueSampleMapping()
+//	{
+//		H5ExpressionDataLoader.loadTissueTypeNames();
+//		H5ExpressionDataLoader.loadGeneNames();
+//		
+//		Map<String, String> map = H5ExpressionDataLoader.getTissueToSamples();
+//		for (String tissue : map.keySet().parallelStream().sorted().collect(Collectors.toList()))
+//		{
+//			System.out.println(tissue+"\t"+map.get(tissue));
+//			
+//		}
+//	}
+	
+	@Test
+	public void getTissuesWithCounts()
+	{
+		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadGeneNames();
+		Map<String, List<Integer>> tissueMap = H5ExpressionDataLoader.getTissueTypeToIndex();
+		tissueMap.keySet().stream().sorted().forEach(t -> System.out.println(t + "\t" + tissueMap.get(t).size()));
+	}
+	
+	
 }

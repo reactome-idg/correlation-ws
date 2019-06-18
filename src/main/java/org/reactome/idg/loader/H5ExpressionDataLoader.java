@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -230,6 +231,11 @@ public class H5ExpressionDataLoader
 		logger.info("Number of genes loaded: {}", geneIndices.size());
 	}
 	
+	public static Set<String> getTissueTypes()
+	{
+		return tissueTypes;
+	}
+	
 	public static void loadTissueTypeNames()
 	{
 		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
@@ -279,6 +285,26 @@ public class H5ExpressionDataLoader
 //		tissueTypeToIndex.keySet().parallelStream().map( t -> tissueTypeToIndex.get(t).size()).max(Integer::compareTo)
 //		);
 //		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() == 8231) {logger.info(t);} }) ;
+
+
+		// size is the key, the *number* with that size is the value.
+		Map<Integer,Integer> histogram = new HashMap<>();
+		for (String tisssue : tissueTypeToIndex.keySet())
+		{
+			int size = tissueTypeToIndex.get(tisssue).size();
+			if (histogram.containsKey(size))
+			{
+				histogram.put(size, histogram.get(size)+1 );
+			}
+			else
+			{
+				histogram.put(size, 1);
+			}
+		}
+		for (Integer size : histogram.keySet().stream().sorted().collect(Collectors.toList()))
+		{
+			logger.info("Samples / tissue: {} ; # different tissues: {}", size, histogram.get(size));
+		}
 		
 		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
@@ -339,4 +365,52 @@ public class H5ExpressionDataLoader
 		}
 	}
 
+//	public static Map<String, String> getTissueToSamples()
+//	{
+//		Map<String, String> tissueSampleMapping = new HashMap<>();
+//		
+//		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+//		long dataset_id = H5.H5Dopen(file_id, "/meta/Sample_geo_accession", HDF5Constants.H5P_DEFAULT);
+//		long type_id = H5.H5Dget_type(dataset_id);
+//		long dataWidth = H5.H5Tget_size(type_id);
+//		long space_id = H5.H5Dget_space(dataset_id);
+//		long[] dims = new long[2];
+//		long[] maxdims = new long[2];
+//		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
+//		byte[][] dset_data = new byte[NUM_SAMPLES][(int) dataWidth];
+//		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
+//		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
+//		byte[] tempbuf = new byte[(int) dataWidth];
+//		for (int indx = 0; indx < maxdims[0]; indx++)
+//		{
+//			for (int jndx = 0; jndx < dataWidth; jndx++)
+//			{
+//				tempbuf[jndx] = dset_data[indx][jndx];
+//			}
+//			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
+//		}
+//		H5.H5Dclose(dataset_id);
+//		H5.H5Tclose(type_id);
+//		H5.H5Sclose(space_id);
+//		H5.H5Fclose(file_id);
+//		logger.info("Number of elements: ", maxdims[0]);
+//		for (int indx = 0; indx < maxdims[0]; indx++)
+//		{
+//			String sampleId = str_data[indx].toString();
+//			tissueSampleMapping.put(indexOfTissues.get(indx), sampleId);
+//		}
+//		
+//		return tissueSampleMapping;
+//	}
+
+
+	public static Map<Integer, String> getIndexOfTissues() {
+		return indexOfTissues;
+	}
+
+
+	public static Map<String, List<Integer>> getTissueTypeToIndex() {
+		return tissueTypeToIndex;
+	}
+	
 }
