@@ -13,37 +13,44 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.reactome.idg.loader.H5ExpressionDataLoader;
 
 @SuppressWarnings("static-method")
 public class TestH5Loader
 {
-	@Test
-	public void testH5LoaderIT()
+	@BeforeClass
+	public static void setup()
 	{
-//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
+		H5ExpressionDataLoader.setHdfExpressionFileAndLoadCounts("/media/sshorser/data/reactome/IDGFiles/human_matrix.h5");
+	}
+	
+	@Test
+	public void testGetExpressionsForGene()
+	{
 		H5ExpressionDataLoader.getExpressionValuesForGene("AAA");
 	}
 	
 	@Test
 	public void testH5LoaderTissueTypesIT()
 	{
-//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		H5ExpressionDataLoader.loadTissueTypeNames();
+		assertNotNull(H5ExpressionDataLoader.getTissueTypes());
+		assertNotNull(H5ExpressionDataLoader.getTissueTypeToIndex());
 	}
 	
 	@Test
 	public void testH5LoaderGeneNamesIT()
 	{
-//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		H5ExpressionDataLoader.loadGeneNames();
+		assertNotNull(H5ExpressionDataLoader.getGeneIndices());
 	}
 	
 	@Test
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
-//		H5ExpressionDataLoader loader = new H5ExpressionDataLoader();
 		H5ExpressionDataLoader.loadGeneNames();
 		H5ExpressionDataLoader.loadTissueTypeNames();
 		int expressionValues[] = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
@@ -114,8 +121,6 @@ public class TestH5Loader
 		H5ExpressionDataLoader.loadGeneNames();
 		H5ExpressionDataLoader.loadTissueTypeNames();
 
-//		String tissueName = "LCL-derived iPSC"; //biggest data set!
-//		String tissueName = "HSTL_Spleen";
 		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
 		loadTissueType(tissueName);
 		
@@ -128,8 +133,8 @@ public class TestH5Loader
 		tissueName = "brain";
 		loadTissueType(tissueName);
 		
-		tissueName = "LCL-derived iPSC";
-		loadTissueType(tissueName);
+//		tissueName = "LCL-derived iPSC"; //biggest data set! takes > 1 hour on my workstation.
+//		loadTissueType(tissueName);
 	}
 
 	private void loadTissueType(String tissueName)
