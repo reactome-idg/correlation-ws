@@ -1,5 +1,9 @@
 package org.reactome.idg.loader;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -43,7 +47,6 @@ public class H5ExpressionDataLoader
 		// so having multiple instances of this class could cause problems if they all try to access the file simultaneously.
 		// So everything here must be static!
 	}
-	
 
 	private static long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
@@ -58,13 +61,48 @@ public class H5ExpressionDataLoader
 		return elementCoords;
 	}
 	
+	/**
+	 * Get expression values for all genes, for a tissue. All sample IDs for the tissue should be in a text file. 
+	 * @param tissueFileName - the name of the file that contains the sample IDs for the tissue.
+	 * @return a matrix of expression values. Columns are genes, rows are samples.
+	 * @throws IOException
+	 */
+	public static int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
+	{
+		List<String> sampleIds = Files.readAllLines(tissueFileName);
+		List<Integer> indicesForTissue = new ArrayList<>();
+		for (String sampleId : sampleIds)
+		{
+			indicesForTissue.add(sampleIdToIndex.get(sampleId));
+		}
+		String tissueName = tissueFileName.getFileName().toString();
+		return getExpressionValuesByIndices(indicesForTissue, tissueName);
+		
+	}
 
+	/**
+	 * Get expression values for all genes, for a tissue.
+	 * @param tissue - The name of the tissue, as it is found in the dataset /meta/Sample_source_name_ch1
+	 * @return a matrix of expression values. Columns are genes, rows are samples.
+	 */
 	public static int[][] getExpressionValuesforTissue(String tissue)
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
-		logger.info("number of samples for tissue ({}): {}", tissue, indicesForTissue.size());
-		logger.info("Tissue indices: {}", indicesForTissue.toString());
-		int[][] expressionValues = new int[numberOfGenes][indicesForTissue.size()];
+		return getExpressionValuesByIndices(indicesForTissue, tissue);
+	}
+	
+	/**
+	 * Gets expression values based on a list of indices.
+	 * @param indices
+	 * @param datasubsetName
+	 * @return
+	 */
+	private static int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
+	{
+//		List<Integer> indicesForTissue = sampleIdToIndex.get(tissue);
+		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
+		logger.info("Tissue indices: {}", indices.toString());
+		int[][] expressionValues = new int[numberOfGenes][indices.size()];
 		
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
@@ -82,20 +120,20 @@ public class H5ExpressionDataLoader
 		int blockCount = 0;
 		int blockWidth = 1;
 		// make a list of contiguous blocks.
-		for (int i = 0; i<indicesForTissue.size(); i += blockWidth)
+		for (int i = 0; i<indices.size(); i += blockWidth)
 		{
 			blockWidth = 1;
-			int initialIndex = indicesForTissue.get(i);
-			int currentIndex = indicesForTissue.get(i);
-			if (i + blockWidth < indicesForTissue.size())
+			int initialIndex = indices.get(i);
+			int currentIndex = indices.get(i);
+			if (i + blockWidth < indices.size())
 			{
-				int nextIndex = indicesForTissue.get(i + 1);
+				int nextIndex = indices.get(i + 1);
 				// keep adding to the contiguous block, until we get a point where the next index is no longer a part of this block.
-				while (nextIndex - currentIndex == 1 && i + blockWidth < indicesForTissue.size() - 1)
+				while (nextIndex - currentIndex == 1 && i + blockWidth < indices.size() - 1)
 				{
 					blockWidth++;
 					currentIndex = nextIndex;
-					nextIndex = indicesForTissue.get(i + blockWidth);
+					nextIndex = indices.get(i + blockWidth);
 				}
 			}
 			else 
@@ -131,7 +169,7 @@ public class H5ExpressionDataLoader
 		
 		// Now... read the selections into a dataset.
 		// DimX is how many total indices there were for a tissue.
-		int dimx = indicesForTissue.size();
+		int dimx = indices.size();
 		// DimY is how many genes there were (assume all, for all tissues).
 		int dimy = numberOfGenes;		
 
@@ -140,7 +178,6 @@ public class H5ExpressionDataLoader
 		return expressionValues;
 	}
 	
-
 	/**
 	 * Gets a list of expression values for a gene/tissue pair.
 	 * @param gene
@@ -325,16 +362,12 @@ public class H5ExpressionDataLoader
 			long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);
 			
 			long type_id = H5.H5Dget_type(dataset_id);
-//			System.out.println(type_id);
 			long dataWidth = H5.H5Tget_size(type_id);
 			long space_id = H5.H5Dget_space(dataset_id);
 			long[] dims = new long[2];
 			long[] maxdims = new long[2];
 			H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-//			System.out.println(dims[0]);
-//			System.out.println(maxdims[0]);
 			byte[][] dset_data = new byte[numberOfSamples][(int) dataWidth];
-//			System.out.println(dataWidth);
 			if (dataset_id >= 0)
 			{
 				long dcpl_id = H5.H5Dget_create_plist(dataset_id);
@@ -367,8 +400,6 @@ public class H5ExpressionDataLoader
 			
 			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 			type_id = H5.H5Dget_type(dataset_id);
-//			System.out.println(type_id);
-//			System.out.println(H5.H5Tget_tag(type_id));
 		}
 	}
 
@@ -453,5 +484,45 @@ public class H5ExpressionDataLoader
 		numberOfGenes = (int) dims[1]; // You should get ~35k here.
 	}
 
-	
+	/**
+	 * Reads sample IDs from a file that is named with the tissue name, and then returns expression data.
+	 * @param tissueName
+	 * @return
+	 * @throws IOException
+	 */
+	public static int[][] getExpressionValuesByTissueSamples(String tissueName) throws IOException
+	{
+		List<String> sampleIds = Files.readAllLines(Paths.get(tissueName + ".txt"));
+		int numberOfSamplesForTissue = sampleIds.size();
+		int[][] expressionValues = new int[numberOfSamplesForTissue][H5ExpressionDataLoader.numberOfGenes];
+		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		long dset_space_id = H5.H5Dget_space(dataset_id);
+		int dimx = numberOfSamplesForTissue;
+		int dimy = H5ExpressionDataLoader.numberOfGenes;
+		int op = HDF5Constants.H5S_SELECT_SET;
+		boolean isFirst = true;
+//		int i = 0;
+		// For each sample, create an array of all gene-coordinates for this sample, and then select it.
+		for (String sampleId : sampleIds)
+		{
+			
+			long[] start = { sampleIdToIndex.get(sampleId), 0 };
+			long[] count = { 1, 1 };
+			long[] block = { 1, numberOfGenes };
+			int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, block);
+			if (status < 0)
+			{
+				logger.error("Selection returned an error code: {}", status);
+			}
+			if (isFirst)
+			{
+				isFirst = false;
+				op = HDF5Constants.H5S_SELECT_OR;
+			}
+		}
+		
+		H5ExpressionDataLoader.readData(dataset_id, dset_space_id, dimx, dimy);
+		return expressionValues;
+	}
 }

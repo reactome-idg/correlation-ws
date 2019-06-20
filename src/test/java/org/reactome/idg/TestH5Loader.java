@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -248,4 +250,19 @@ public class TestH5Loader
 		H5ExpressionDataLoader.loadSampleIndices();
 	}
 	
+	@Test
+	public void getExpressionValuesForTissueFromSampleIDFile() throws IOException
+	{
+		H5ExpressionDataLoader.loadSampleIndices();
+		int[][] expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
+		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
+		for (int i = 0; i < Math.min(10,expressionValues.length); i++)
+		{
+			for (int j = 0; j < Math.min(10, expressionValues[i].length); j++)
+			{
+				System.out.print(expressionValues[i][j]+"\t");
+			}
+			System.out.print("\n");
+		}
+	}
 }
