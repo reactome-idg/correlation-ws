@@ -24,6 +24,8 @@ public class H5ExpressionDataLoader
 	// A mapping of indices and the tissue type associated with it.
 	private static Map<Integer, String> indexOfTissues = new HashMap<>();
 	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
+	// keep track of the indices for sample IDs.
+	private static Map<String, Integer> sampleIdToIndex = new HashMap<>();
 
 	private static int numberOfSamples ;
 	private static String hdfExpressionFile;
@@ -31,6 +33,7 @@ public class H5ExpressionDataLoader
 	private final static String expressionDSName = "/data/expression";
 	private final static String genesDSName = "/meta/genes";
 	private final static String tissueDSName = "/meta/Sample_source_name_ch1";
+	private final static String sampleIdDSName = "/meta/Sample_geo_accession";
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
 	private static int numberOfGenes ;
 
@@ -200,22 +203,35 @@ public class H5ExpressionDataLoader
 		return dset_data;
 	}
 	
-	public static void loadGeneNames()
+	public static void loadSampleIndices()
 	{
-		geneIndices = new HashMap<>();
+		H5ExpressionDataLoader.sampleIdToIndex = new HashMap<>();
+		
+		StringBuffer[] str_data = readDataSet(H5ExpressionDataLoader.sampleIdDSName, H5ExpressionDataLoader.numberOfSamples);
+		logger.info("Number of elements: {}", str_data.length);
+		for (int indx = 0; indx <  str_data.length; indx++)
+		{
+			H5ExpressionDataLoader.sampleIdToIndex.put(str_data[indx].toString(), indx);
+		}
+		logger.info("Number of Sample IDs loaded: {}", H5ExpressionDataLoader.sampleIdToIndex.size());
+	}
+
+
+	private static StringBuffer[] readDataSet(String dsName, int dsSize)
+	{
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);
+		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
 		long type_id = H5.H5Dget_type(dataset_id);
 		long dataWidth = H5.H5Tget_size(type_id);
 		long space_id = H5.H5Dget_space(dataset_id);
 		long[] dims = new long[2];
 		long[] maxdims = new long[2];
 		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-		byte[][] dset_data = new byte[numberOfGenes][(int) dataWidth];
+		byte[][] dset_data = new byte[dsSize][(int) dataWidth];
 		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
 		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
 		byte[] tempbuf = new byte[(int) dataWidth];
-		for (int indx = 0; indx < maxdims[0]; indx++)
+		for (int indx = 0; indx < dset_data.length; indx++)
 		{
 			for (int jndx = 0; jndx < dataWidth; jndx++)
 			{
@@ -227,8 +243,15 @@ public class H5ExpressionDataLoader
 		H5.H5Tclose(type_id);
 		H5.H5Sclose(space_id);
 		H5.H5Fclose(file_id);
-		logger.info("Number of elements: {}",maxdims[0]);
-		for (int indx = 0; indx < maxdims[0]; indx++)
+		return str_data;
+	}
+	
+	public static void loadGeneNames()
+	{
+		H5ExpressionDataLoader.geneIndices = new HashMap<>();
+		StringBuffer[] str_data = readDataSet(H5ExpressionDataLoader.genesDSName, H5ExpressionDataLoader.numberOfGenes);
+		logger.info("Number of elements: {}", str_data.length);
+		for (int indx = 0; indx < str_data.length; indx++)
 		{
 			geneIndices.put(str_data[indx].toString(), indx);
 		}
@@ -242,34 +265,12 @@ public class H5ExpressionDataLoader
 	
 	public static void loadTissueTypeNames()
 	{
-		tissueTypeToIndex = new HashMap<>();
-		indexOfTissues = new HashMap<>();
-		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, tissueDSName, HDF5Constants.H5P_DEFAULT);
-		long type_id = H5.H5Dget_type(dataset_id);
-		long dataWidth = H5.H5Tget_size(type_id);
-		long space_id = H5.H5Dget_space(dataset_id);
-		long[] dims = new long[2];
-		long[] maxdims = new long[2];
-		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-		byte[][] dset_data = new byte[numberOfSamples][(int) dataWidth];
-		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-		byte[] tempbuf = new byte[(int) dataWidth];
-		for (int indx = 0; indx < maxdims[0]; indx++)
-		{
-			for (int jndx = 0; jndx < dataWidth; jndx++)
-			{
-				tempbuf[jndx] = dset_data[indx][jndx];
-			}
-			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
-		}
-		H5.H5Dclose(dataset_id);
-		H5.H5Tclose(type_id);
-		H5.H5Sclose(space_id);
-		H5.H5Fclose(file_id);
-		logger.info("Number of elements: ", maxdims[0]);
-		for (int indx = 0; indx < maxdims[0]; indx++)
+		H5ExpressionDataLoader.tissueTypeToIndex = new HashMap<>();
+		H5ExpressionDataLoader.indexOfTissues = new HashMap<>();
+
+		StringBuffer[] str_data = H5ExpressionDataLoader.readDataSet(tissueDSName, numberOfSamples);
+		logger.info("Number of elements: ", str_data.length);
+		for (int indx = 0; indx < str_data.length; indx++)
 		{
 			String tissueType = str_data[indx].toString();
 			tissueTypes.add(tissueType);
@@ -451,7 +452,6 @@ public class H5ExpressionDataLoader
 		numberOfSamples = (int) dims[0]; // You should get ~167k here.
 		numberOfGenes = (int) dims[1]; // You should get ~35k here.
 	}
-
 
 	
 }

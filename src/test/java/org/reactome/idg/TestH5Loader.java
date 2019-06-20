@@ -242,5 +242,10 @@ public class TestH5Loader
 		tissueMap.keySet().stream().sorted().forEach(t -> System.out.println(t + "\t" + tissueMap.get(t).size()));
 	}
 	
+	@Test
+	public void getSampleIDsIT()
+	{
+		H5ExpressionDataLoader.loadSampleIndices();
+	}
 	
 }
