@@ -29,11 +29,11 @@ public class TestH5Loader
 		H5ExpressionDataLoader.setHdfExpressionFileAndLoadCounts("/media/sshorser/data/reactome/IDGFiles/human_matrix.h5");
 	}
 	
-	@Test
-	public void testGetExpressionsForGene()
-	{
-		H5ExpressionDataLoader.getExpressionValuesForGene("AAA");
-	}
+//	@Test
+//	public void testGetExpressionsForGene()
+//	{
+//		H5ExpressionDataLoader.getExpressionValuesForGene("AAA");
+//	}
 	
 	@Test
 	public void testH5LoaderTissueTypesIT()
@@ -71,14 +71,14 @@ public class TestH5Loader
 		Arrays.stream(expressionValues).forEach(x -> System.out.print(x+", "));
 		assertEquals(119,  expressionValues[0]);
 		System.out.println("\n");
-/*
-		expressionValues = loader.getExpressionValuesForGeneAndTissue("A1BG", "Heart");
+
+		expressionValues = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "Heart");
 		assertNotNull(expressionValues);
-		assertTrue(expressionValues.size() > 0);
-		System.out.println(expressionValues.size());
-		expressionValues.stream().forEach(x -> System.out.print(x+", "));
+		assertTrue(expressionValues.length > 0);
+		System.out.println(expressionValues.length);
+		Arrays.stream(expressionValues).forEach(x -> System.out.print(x+", "));
 		System.out.println("\n");
-		
+/*		
 		// Note: "heart" and "Heart" will yield different results. Tissue-type names are case-sensitive in the source file.
 		expressionValues = loader.getExpressionValuesForGeneAndTissue("A1CF", "heart");
 		assertNotNull(expressionValues);
@@ -253,7 +253,7 @@ public class TestH5Loader
 	@Test
 	public void getExpressionValuesForTissueFromSampleIDFile() throws IOException
 	{
-		H5ExpressionDataLoader.loadSampleIndices();
+		H5ExpressionDataLoader.loadMetaData();
 		int[][] expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
 		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
 		for (int i = 0; i < Math.min(10,expressionValues.length); i++)

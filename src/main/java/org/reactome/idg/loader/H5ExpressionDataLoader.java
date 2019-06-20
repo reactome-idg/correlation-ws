@@ -3,7 +3,6 @@ package org.reactome.idg.loader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -48,6 +47,12 @@ public class H5ExpressionDataLoader
 		// So everything here must be static!
 	}
 
+	/**
+	 * Gets element coordinates for a gene (identified by index) across all samples for a tissue (identified by name).
+	 * @param tissue - The name of the tissue.
+	 * @param geneIndex - The index of a gene.
+	 * @return An array that contains the coordinates in the dataset of the expression data for a specific gene across all samples for the specified tissue.
+	 */
 	private static long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
@@ -108,10 +113,6 @@ public class H5ExpressionDataLoader
 		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 		long dset_space_id = H5.H5Dget_space(dataset_id);
 		
-		// I think I can iterate over all ranges, and ADD them to a selection and then do one single select at the end. To try that later today...
-		// The only problem is that the output doesn't seem right... :/
-		// Append selections for each gene
-//		int geneCount = 0;
 		boolean isFirst = true;
 		int op = HDF5Constants.H5S_SELECT_SET;
 		
@@ -125,6 +126,7 @@ public class H5ExpressionDataLoader
 			blockWidth = 1;
 			int initialIndex = indices.get(i);
 			int currentIndex = indices.get(i);
+			// If there IS a next index, try to determine the block width.
 			if (i + blockWidth < indices.size())
 			{
 				int nextIndex = indices.get(i + 1);
@@ -136,6 +138,7 @@ public class H5ExpressionDataLoader
 					nextIndex = indices.get(i + blockWidth);
 				}
 			}
+			// If there is no next index, then this block's width is 1.
 			else 
 			{
 				blockWidth = 1;
@@ -143,6 +146,7 @@ public class H5ExpressionDataLoader
 			
 			maxBlockWidth = Math.max(blockWidth, maxBlockWidth);
 			blockCount++;
+			// A block is defined as having a starting point and a width. Create a "block" and add it to the list.
 			List<Integer> currentBlock = Arrays.asList( initialIndex, blockWidth );
 			contigBlocks.add(currentBlock);
 		}
@@ -160,6 +164,7 @@ public class H5ExpressionDataLoader
 			{
 				logger.error("Selection returned an error code: {}", status);
 			}
+			// After the first selection, need to use H5S_SELECT_OR to combine multiple selections.
 			if (isFirst)
 			{
 				isFirst = false;
@@ -173,15 +178,16 @@ public class H5ExpressionDataLoader
 		// DimY is how many genes there were (assume all, for all tissues).
 		int dimy = numberOfGenes;		
 
+		// Now that the selections have all been made, it is FINALLY time to read the data.
 		expressionValues = readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
 		return expressionValues;
 	}
 	
 	/**
-	 * Gets a list of expression values for a gene/tissue pair.
-	 * @param gene
-	 * @param tissue
+	 * Gets a list of expression values for a gene/tissue pair, across all samples for the tissue.
+	 * @param gene - A gene symbol/id.
+	 * @param tissue - The name of the tissue.
 	 * @return
 	 */
 	public static int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
@@ -224,6 +230,14 @@ public class H5ExpressionDataLoader
 	}
 
 
+	/**
+	 * Reads data from a dataset.
+	 * @param dataset_id - The dataset ID.
+	 * @param space_id - The ID of the dataset's dataspace.
+	 * @param dimx - The size of the x-dimension of the portion to read.
+	 * @param dimy - The size of the y-dimension of the portion to read.
+	 * @return An array that is <code>dimx</code> x <code>dimy</code>. 
+	 */
 	private static int[][] readData(long dataset_id, long space_id, int dimx, int dimy)
 	{
 		int[][] dset_data = new int[dimx][dimy];
@@ -253,7 +267,12 @@ public class H5ExpressionDataLoader
 		logger.info("Number of Sample IDs loaded: {}", H5ExpressionDataLoader.sampleIdToIndex.size());
 	}
 
-
+	/**
+	 * Reads an array from dataset into an array of StringBuffers.
+	 * @param dsName - The name of the dataset in the HDF5 file. For example: "/meta/genes".
+	 * @param dsSize - The number of data elements to read. This should be set to the size of the dataset.
+	 * @return An array of StringBuffers.
+	 */
 	private static StringBuffer[] readDataSet(String dsName, int dsSize)
 	{
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
@@ -353,55 +372,55 @@ public class H5ExpressionDataLoader
 		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
 	
-	public static void getExpressionValuesForGene(String geneId)
-	{
-		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		
-		if (file_id >= 0)
-		{
-			long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);
-			
-			long type_id = H5.H5Dget_type(dataset_id);
-			long dataWidth = H5.H5Tget_size(type_id);
-			long space_id = H5.H5Dget_space(dataset_id);
-			long[] dims = new long[2];
-			long[] maxdims = new long[2];
-			H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-			byte[][] dset_data = new byte[numberOfSamples][(int) dataWidth];
-			if (dataset_id >= 0)
-			{
-				long dcpl_id = H5.H5Dget_create_plist(dataset_id);
-				if (dcpl_id >= 0)
-				{
-					if (dataset_id >= 0)
-					{
-						StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-						long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
-						H5.H5Tset_size(memtype_id, dataWidth);
-						H5.H5Dread(dataset_id, memtype_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-						
-						byte[] tempbuf = new byte[(int) dataWidth];
-						for (int indx = 0; indx < maxdims[0]; indx++)
-						{
-							for (int jndx = 0; jndx < dataWidth; jndx++)
-							{
-								tempbuf[jndx] = dset_data[indx][jndx];
-							}
-							str_data[indx] = new StringBuffer(new String(tempbuf).trim());
-						}
-						
-						for (int indx = 0; indx < maxdims[0]; indx++)
-						{
-							logger.info("{} [{}]: {}", genesDSName, indx, str_data[indx]);
-						}
-					}
-				}
-			}
-			
-			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
-			type_id = H5.H5Dget_type(dataset_id);
-		}
-	}
+//	public static void getExpressionValuesForGene(String geneId)
+//	{
+//		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+//		
+//		if (file_id >= 0)
+//		{
+//			long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);
+//			
+//			long type_id = H5.H5Dget_type(dataset_id);
+//			long dataWidth = H5.H5Tget_size(type_id);
+//			long space_id = H5.H5Dget_space(dataset_id);
+//			long[] dims = new long[2];
+//			long[] maxdims = new long[2];
+//			H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
+//			byte[][] dset_data = new byte[numberOfSamples][(int) dataWidth];
+//			if (dataset_id >= 0)
+//			{
+//				long dcpl_id = H5.H5Dget_create_plist(dataset_id);
+//				if (dcpl_id >= 0)
+//				{
+//					if (dataset_id >= 0)
+//					{
+//						StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
+//						long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
+//						H5.H5Tset_size(memtype_id, dataWidth);
+//						H5.H5Dread(dataset_id, memtype_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
+//						
+//						byte[] tempbuf = new byte[(int) dataWidth];
+//						for (int indx = 0; indx < maxdims[0]; indx++)
+//						{
+//							for (int jndx = 0; jndx < dataWidth; jndx++)
+//							{
+//								tempbuf[jndx] = dset_data[indx][jndx];
+//							}
+//							str_data[indx] = new StringBuffer(new String(tempbuf).trim());
+//						}
+//						
+//						for (int indx = 0; indx < maxdims[0]; indx++)
+//						{
+//							logger.info("{} [{}]: {}", genesDSName, indx, str_data[indx]);
+//						}
+//					}
+//				}
+//			}
+//			
+//			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+//			type_id = H5.H5Dget_type(dataset_id);
+//		}
+//	}
 
 //	public static Map<String, String> getTissueToSamples()
 //	{
@@ -483,46 +502,15 @@ public class H5ExpressionDataLoader
 		numberOfSamples = (int) dims[0]; // You should get ~167k here.
 		numberOfGenes = (int) dims[1]; // You should get ~35k here.
 	}
-
+	
 	/**
-	 * Reads sample IDs from a file that is named with the tissue name, and then returns expression data.
-	 * @param tissueName
-	 * @return
-	 * @throws IOException
+	 * Loads various metadata: gene-name-to-index mapping, tissue names, tissue-index-to-names mapping,
+	 * tissue-names-to-indices mapping, sample-names-to-index mapping
 	 */
-	public static int[][] getExpressionValuesByTissueSamples(String tissueName) throws IOException
+	public static void loadMetaData()
 	{
-		List<String> sampleIds = Files.readAllLines(Paths.get(tissueName + ".txt"));
-		int numberOfSamplesForTissue = sampleIds.size();
-		int[][] expressionValues = new int[numberOfSamplesForTissue][H5ExpressionDataLoader.numberOfGenes];
-		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
-		long dset_space_id = H5.H5Dget_space(dataset_id);
-		int dimx = numberOfSamplesForTissue;
-		int dimy = H5ExpressionDataLoader.numberOfGenes;
-		int op = HDF5Constants.H5S_SELECT_SET;
-		boolean isFirst = true;
-//		int i = 0;
-		// For each sample, create an array of all gene-coordinates for this sample, and then select it.
-		for (String sampleId : sampleIds)
-		{
-			
-			long[] start = { sampleIdToIndex.get(sampleId), 0 };
-			long[] count = { 1, 1 };
-			long[] block = { 1, numberOfGenes };
-			int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, block);
-			if (status < 0)
-			{
-				logger.error("Selection returned an error code: {}", status);
-			}
-			if (isFirst)
-			{
-				isFirst = false;
-				op = HDF5Constants.H5S_SELECT_OR;
-			}
-		}
-		
-		H5ExpressionDataLoader.readData(dataset_id, dset_space_id, dimx, dimy);
-		return expressionValues;
+		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadSampleIndices();
 	}
 }
