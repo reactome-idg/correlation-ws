@@ -179,7 +179,7 @@ public class H5ExpressionDataLoader
 		int dimy = numberOfGenes;		
 
 		// Now that the selections have all been made, it is FINALLY time to read the data.
-		expressionValues = readData(dataset_id, dset_space_id, dimx, dimy);
+		expressionValues = HDFUtils.readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
 		return expressionValues;
 	}
@@ -196,10 +196,9 @@ public class H5ExpressionDataLoader
 		
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		long space_id = H5.H5Dget_space(dataset_id);
 
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
-
-		long space_id = H5.H5Dget_space(dataset_id);
 
 		long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndex);
 		
@@ -209,13 +208,13 @@ public class H5ExpressionDataLoader
 			logger.error("Error selecting elements! response code: {}",status);
 			return null;
 		}
-		long[] start = new long[2];
-		long[] end = new long[2];
-		H5.H5Sget_select_bounds(space_id, start, end);
+//		long[] start = new long[2];
+//		long[] end = new long[2];
+//		H5.H5Sget_select_bounds(space_id, start, end);
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
 		
-		int[][] dset_data = readData(dataset_id, space_id, dimx, dimy);
+		int[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
 		int[] expressionValues = new int[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
@@ -228,37 +227,12 @@ public class H5ExpressionDataLoader
 		H5.H5close();
 		return expressionValues;
 	}
-
-
-	/**
-	 * Reads data from a dataset.
-	 * @param dataset_id - The dataset ID.
-	 * @param space_id - The ID of the dataset's dataspace.
-	 * @param dimx - The size of the x-dimension of the portion to read.
-	 * @param dimy - The size of the y-dimension of the portion to read.
-	 * @return An array that is <code>dimx</code> x <code>dimy</code>. 
-	 */
-	private static int[][] readData(long dataset_id, long space_id, int dimx, int dimy)
-	{
-		int[][] dset_data = new int[dimx][dimy];
-		
-		long[] dims = new long[2];
-		dims[0] = dimx;
-		dims[1] = dimy;
-		long memspace_id = H5.H5Screate_simple(2, dims, null);
-		long type_id = H5.H5Dget_type(dataset_id);
-		H5.H5Dread(dataset_id, type_id, memspace_id, space_id, HDF5Constants.H5P_DEFAULT, dset_data);
-		H5.H5Sclose(memspace_id);
-		H5.H5Tclose(type_id);
-
-		return dset_data;
-	}
 	
 	public static void loadSampleIndices()
 	{
 		H5ExpressionDataLoader.sampleIdToIndex = new HashMap<>();
 		
-		StringBuffer[] str_data = readDataSet(H5ExpressionDataLoader.sampleIdDSName, H5ExpressionDataLoader.numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile, H5ExpressionDataLoader.sampleIdDSName, H5ExpressionDataLoader.numberOfSamples);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
@@ -267,45 +241,10 @@ public class H5ExpressionDataLoader
 		logger.info("Number of Sample IDs loaded: {}", H5ExpressionDataLoader.sampleIdToIndex.size());
 	}
 
-	/**
-	 * Reads an array from dataset into an array of StringBuffers.
-	 * @param dsName - The name of the dataset in the HDF5 file. For example: "/meta/genes".
-	 * @param dsSize - The number of data elements to read. This should be set to the size of the dataset.
-	 * @return An array of StringBuffers.
-	 */
-	private static StringBuffer[] readDataSet(String dsName, int dsSize)
-	{
-		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
-		long type_id = H5.H5Dget_type(dataset_id);
-		long dataWidth = H5.H5Tget_size(type_id);
-		long space_id = H5.H5Dget_space(dataset_id);
-		long[] dims = new long[2];
-		long[] maxdims = new long[2];
-		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-		byte[][] dset_data = new byte[dsSize][(int) dataWidth];
-		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-		byte[] tempbuf = new byte[(int) dataWidth];
-		for (int indx = 0; indx < dset_data.length; indx++)
-		{
-			for (int jndx = 0; jndx < dataWidth; jndx++)
-			{
-				tempbuf[jndx] = dset_data[indx][jndx];
-			}
-			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
-		}
-		H5.H5Dclose(dataset_id);
-		H5.H5Tclose(type_id);
-		H5.H5Sclose(space_id);
-		H5.H5Fclose(file_id);
-		return str_data;
-	}
-	
 	public static void loadGeneNames()
 	{
 		H5ExpressionDataLoader.geneIndices = new HashMap<>();
-		StringBuffer[] str_data = readDataSet(H5ExpressionDataLoader.genesDSName, H5ExpressionDataLoader.numberOfGenes);
+		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile, H5ExpressionDataLoader.genesDSName, H5ExpressionDataLoader.numberOfGenes);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -324,7 +263,7 @@ public class H5ExpressionDataLoader
 		H5ExpressionDataLoader.tissueTypeToIndex = new HashMap<>();
 		H5ExpressionDataLoader.indexOfTissues = new HashMap<>();
 
-		StringBuffer[] str_data = H5ExpressionDataLoader.readDataSet(tissueDSName, numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile,tissueDSName, numberOfSamples);
 		logger.info("Number of elements: ", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -484,7 +423,7 @@ public class H5ExpressionDataLoader
 	}
 	
 	/**
-	 * Sets the path to the HDF file containe gene expression data.
+	 * Sets the path to the HDF file containe gene expression data, and then load some data.
 	 * NOTE: This method will ALSO attempt to read the file and load the number of
 	 * genes and samples from the file.
 	 * @param hdfExpressionFile - the full path to the HDF file.

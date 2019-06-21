@@ -38,7 +38,7 @@ public class TestH5Loader
 	@Test
 	public void testH5LoaderTissueTypesIT()
 	{
-		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadMetaData();
 		assertNotNull(H5ExpressionDataLoader.getTissueTypes());
 		assertNotNull(H5ExpressionDataLoader.getTissueTypeToIndex());
 	}
@@ -46,15 +46,14 @@ public class TestH5Loader
 	@Test
 	public void testH5LoaderGeneNamesIT()
 	{
-		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadMetaData();
 		assertNotNull(H5ExpressionDataLoader.getGeneIndices());
 	}
 	
 	@Test
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
-		H5ExpressionDataLoader.loadGeneNames();
-		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadMetaData();
 		int expressionValues[] = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
@@ -120,8 +119,7 @@ public class TestH5Loader
 	@Test
 	public void testGetExpressionValuesForTissueAllGenes()
 	{
-		H5ExpressionDataLoader.loadGeneNames();
-		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadMetaData();
 
 		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
 		loadTissueType(tissueName);
@@ -164,8 +162,7 @@ public class TestH5Loader
 	@Test
 	public void testCalculateCorrelationIT()
 	{
-		H5ExpressionDataLoader.loadGeneNames();
-		H5ExpressionDataLoader.loadTissueTypeNames();
+		H5ExpressionDataLoader.loadMetaData();
 		LocalDateTime start;
 		LocalDateTime end;
 		int[][] expressionValues;
@@ -216,8 +213,7 @@ public class TestH5Loader
 	@Test
 	public void testTissueTypes()
 	{
-		H5ExpressionDataLoader.loadTissueTypeNames();
-		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadMetaData();
 		H5ExpressionDataLoader.getTissueTypes().stream().sorted().collect(Collectors.toList()).forEach(t -> System.out.println(t));
 	}
 //	
@@ -238,8 +234,7 @@ public class TestH5Loader
 	@Test
 	public void getTissuesWithCounts()
 	{
-		H5ExpressionDataLoader.loadTissueTypeNames();
-		H5ExpressionDataLoader.loadGeneNames();
+		H5ExpressionDataLoader.loadMetaData();
 		Map<String, List<Integer>> tissueMap = H5ExpressionDataLoader.getTissueTypeToIndex();
 		tissueMap.keySet().stream().sorted().forEach(t -> System.out.println(t + "\t" + tissueMap.get(t).size()));
 	}
