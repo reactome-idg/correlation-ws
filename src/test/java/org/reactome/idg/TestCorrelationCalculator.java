@@ -17,7 +17,7 @@ public class TestCorrelationCalculator
 		double[][] d = calculator.calculateCorrelation();
 		for (int i = 0; i < Math.min(d.length, 20); i++)
 		{
-			for (int j = 0; j < Math.min(d[i].length, 20); i++)
+			for (int j = 0; j < Math.min(d[i].length, 20); j++)
 			{
 				System.out.print(d[i][j] + "\t");
 			}
