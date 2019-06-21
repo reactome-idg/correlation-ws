@@ -17,17 +17,17 @@ import org.apache.logging.log4j.Logger;
 public class GenePairCorrelationCalculator
 {
 	private static final Logger logger = LogManager.getLogger();
-	private String gene1;
-	private String gene2;
+//	private String gene1;
+//	private String gene2;
 	private String tissue;
 	
 	private double[] gene1SampleValues;
 	private double[] gene2SampleValues;
 	
-	public GenePairCorrelationCalculator(String g1, String g2, String t, String hdfExpressionFile)
+	public GenePairCorrelationCalculator(String t, String hdfExpressionFile)
 	{
-		this.gene1 = g1;
-		this.gene2 = g2;
+//		this.gene1 = g1;
+//		this.gene2 = g2;
 		this.tissue = t;
 		Archs4ExpressionDataLoader.setHdfExpressionFileAndLoadCounts(hdfExpressionFile);
 		Archs4ExpressionDataLoader.loadMetaData();
