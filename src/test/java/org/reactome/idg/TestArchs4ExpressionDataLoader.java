@@ -157,58 +157,6 @@ public class TestArchs4ExpressionDataLoader
 		}
 	}
 	
-
-	@Test
-	public void testCalculateCorrelationIT()
-	{
-		Archs4ExpressionDataLoader.loadMetaData();
-		LocalDateTime start;
-		LocalDateTime end;
-		int[][] expressionValues;
-		start = LocalDateTime.now();
-		String tissueName = "HSTL_Spleen";
-		expressionValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
-		end = LocalDateTime.now();
-		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
-
-		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
-		for (int i = 0; i < Math.min(10,expressionValues.length); i++)
-		{
-			for (int j = 0; j < Math.min(10, expressionValues[i].length); j++)
-			{
-				System.out.print(expressionValues[i][j]+"\t");
-			}
-			System.out.print("\n");
-		}
-		
-		double[][] dExpressionValues = new double[expressionValues.length][expressionValues[0].length];
-		for (int i = 0; i < expressionValues.length; i++)
-		{
-			for (int j = 0; j < expressionValues[i].length; j++)
-			{
-				dExpressionValues[i][j] = expressionValues[i][j];
-			}
-		}
-		
-		// this really just calculates the correlation for a single tissue, and I'm not 100% sure this is the correct way to do it.
-		start = LocalDateTime.now();
-		PearsonsCorrelation cor = new PearsonsCorrelation(dExpressionValues);
-		RealMatrix corMatrix = cor.getCorrelationMatrix();
-		end = LocalDateTime.now();
-		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
-		System.out.println("Column dimensions: " + corMatrix.getColumnDimension());
-		System.out.println("Row dimensions: " + corMatrix.getRowDimension());
-		
-		for (int i = 0; i < 10; i++)
-		{
-			for (int j = 0; j < 10; j++)
-			{
-				System.out.print(corMatrix.getEntry(i, j)+"\t\t");
-			}
-			System.out.print("\n");
-		}
-	}
-	
 	@Test
 	public void testTissueTypes()
 	{
