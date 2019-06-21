@@ -17,7 +17,7 @@ import org.apache.logging.log4j.Logger;
 import hdf.hdf5lib.H5;
 import hdf.hdf5lib.HDF5Constants;
 
-public class H5ExpressionDataLoader
+public class Archs4ExpressionDataLoader
 {
 	private static final Logger logger = LogManager.getLogger();
 	// Need a list of all Tissue-type names.
@@ -40,7 +40,7 @@ public class H5ExpressionDataLoader
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
 	private static int numberOfGenes ;
 
-	private H5ExpressionDataLoader()
+	private Archs4ExpressionDataLoader()
 	{
 		// private constructor to prevent instantiation. The HDF library does NOT allow concurrent access to HDF files 
 		// so having multiple instances of this class could cause problems if they all try to access the file simultaneously.
@@ -230,21 +230,21 @@ public class H5ExpressionDataLoader
 	
 	public static void loadSampleIndices()
 	{
-		H5ExpressionDataLoader.sampleIdToIndex = new HashMap<>();
+		Archs4ExpressionDataLoader.sampleIdToIndex = new HashMap<>();
 		
-		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile, H5ExpressionDataLoader.sampleIdDSName, H5ExpressionDataLoader.numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, Archs4ExpressionDataLoader.numberOfSamples);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
-			H5ExpressionDataLoader.sampleIdToIndex.put(str_data[indx].toString(), indx);
+			Archs4ExpressionDataLoader.sampleIdToIndex.put(str_data[indx].toString(), indx);
 		}
-		logger.info("Number of Sample IDs loaded: {}", H5ExpressionDataLoader.sampleIdToIndex.size());
+		logger.info("Number of Sample IDs loaded: {}", Archs4ExpressionDataLoader.sampleIdToIndex.size());
 	}
 
 	public static void loadGeneNames()
 	{
-		H5ExpressionDataLoader.geneIndices = new HashMap<>();
-		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile, H5ExpressionDataLoader.genesDSName, H5ExpressionDataLoader.numberOfGenes);
+		Archs4ExpressionDataLoader.geneIndices = new HashMap<>();
+		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile, Archs4ExpressionDataLoader.genesDSName, Archs4ExpressionDataLoader.numberOfGenes);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -260,10 +260,10 @@ public class H5ExpressionDataLoader
 	
 	public static void loadTissueTypeNames()
 	{
-		H5ExpressionDataLoader.tissueTypeToIndex = new HashMap<>();
-		H5ExpressionDataLoader.indexOfTissues = new HashMap<>();
+		Archs4ExpressionDataLoader.tissueTypeToIndex = new HashMap<>();
+		Archs4ExpressionDataLoader.indexOfTissues = new HashMap<>();
 
-		StringBuffer[] str_data = HDFUtils.readDataSet(H5ExpressionDataLoader.hdfExpressionFile,tissueDSName, numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile,tissueDSName, numberOfSamples);
 		logger.info("Number of elements: ", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -430,8 +430,8 @@ public class H5ExpressionDataLoader
 	 */
 	public static void setHdfExpressionFileAndLoadCounts(String hdfExpressionFile)
 	{
-		H5ExpressionDataLoader.hdfExpressionFile = hdfExpressionFile;
-		long file_id = H5.H5Fopen(H5ExpressionDataLoader.hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		Archs4ExpressionDataLoader.hdfExpressionFile = hdfExpressionFile;
+		long file_id = H5.H5Fopen(Archs4ExpressionDataLoader.hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long[] dims = new long[2];
 		long[] maxdims = new long[2];
 		
@@ -448,8 +448,8 @@ public class H5ExpressionDataLoader
 	 */
 	public static void loadMetaData()
 	{
-		H5ExpressionDataLoader.loadGeneNames();
-		H5ExpressionDataLoader.loadTissueTypeNames();
-		H5ExpressionDataLoader.loadSampleIndices();
+		Archs4ExpressionDataLoader.loadGeneNames();
+		Archs4ExpressionDataLoader.loadTissueTypeNames();
+		Archs4ExpressionDataLoader.loadSampleIndices();
 	}
 }

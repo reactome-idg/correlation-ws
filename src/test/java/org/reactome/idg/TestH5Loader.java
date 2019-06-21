@@ -15,10 +15,9 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.reactome.idg.loader.H5ExpressionDataLoader;
+import org.reactome.idg.loader.Archs4ExpressionDataLoader;
 
 @SuppressWarnings("static-method")
 public class TestH5Loader
@@ -26,35 +25,35 @@ public class TestH5Loader
 	@BeforeClass
 	public static void setup()
 	{
-		H5ExpressionDataLoader.setHdfExpressionFileAndLoadCounts("/media/sshorser/data/reactome/IDGFiles/human_matrix.h5");
+		Archs4ExpressionDataLoader.setHdfExpressionFileAndLoadCounts("/media/sshorser/data/reactome/IDGFiles/human_matrix.h5");
 	}
 	
 //	@Test
 //	public void testGetExpressionsForGene()
 //	{
-//		H5ExpressionDataLoader.getExpressionValuesForGene("AAA");
+//		Archs4ExpressionDataLoader.getExpressionValuesForGene("AAA");
 //	}
 	
 	@Test
 	public void testH5LoaderTissueTypesIT()
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		assertNotNull(H5ExpressionDataLoader.getTissueTypes());
-		assertNotNull(H5ExpressionDataLoader.getTissueTypeToIndex());
+		Archs4ExpressionDataLoader.loadMetaData();
+		assertNotNull(Archs4ExpressionDataLoader.getTissueTypes());
+		assertNotNull(Archs4ExpressionDataLoader.getTissueTypeToIndex());
 	}
 	
 	@Test
 	public void testH5LoaderGeneNamesIT()
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		assertNotNull(H5ExpressionDataLoader.getGeneIndices());
+		Archs4ExpressionDataLoader.loadMetaData();
+		assertNotNull(Archs4ExpressionDataLoader.getGeneIndices());
 	}
 	
 	@Test
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		int expressionValues[] = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
+		Archs4ExpressionDataLoader.loadMetaData();
+		int expressionValues[] = Archs4ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
@@ -63,7 +62,7 @@ public class TestH5Loader
 		System.out.println("\n");
 		
 		
-		expressionValues = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A2MP1", "HeLa ELAVL1/HuR siRNA1 5d");
+		expressionValues = Archs4ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A2MP1", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
@@ -71,7 +70,7 @@ public class TestH5Loader
 		assertEquals(119,  expressionValues[0]);
 		System.out.println("\n");
 
-		expressionValues = H5ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "Heart");
+		expressionValues = Archs4ExpressionDataLoader.getExpressionValuesForGeneAndTissue("A1BG", "Heart");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
@@ -119,7 +118,7 @@ public class TestH5Loader
 	@Test
 	public void testGetExpressionValuesForTissueAllGenes()
 	{
-		H5ExpressionDataLoader.loadMetaData();
+		Archs4ExpressionDataLoader.loadMetaData();
 
 		String tissueName = "HeLa ELAVL1/HuR siRNA1 5d";
 		loadTissueType(tissueName);
@@ -143,7 +142,7 @@ public class TestH5Loader
 		LocalDateTime end;
 		int[][] expressionValues;
 		start = LocalDateTime.now();
-		expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
+		expressionValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
 		end = LocalDateTime.now();
 		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
 
@@ -162,13 +161,13 @@ public class TestH5Loader
 	@Test
 	public void testCalculateCorrelationIT()
 	{
-		H5ExpressionDataLoader.loadMetaData();
+		Archs4ExpressionDataLoader.loadMetaData();
 		LocalDateTime start;
 		LocalDateTime end;
 		int[][] expressionValues;
 		start = LocalDateTime.now();
 		String tissueName = "HSTL_Spleen";
-		expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
+		expressionValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(tissueName);
 		end = LocalDateTime.now();
 		System.out.println("Elapsed time: " + Duration.between(start, end).toString());
 
@@ -213,17 +212,17 @@ public class TestH5Loader
 	@Test
 	public void testTissueTypes()
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		H5ExpressionDataLoader.getTissueTypes().stream().sorted().collect(Collectors.toList()).forEach(t -> System.out.println(t));
+		Archs4ExpressionDataLoader.loadMetaData();
+		Archs4ExpressionDataLoader.getTissueTypes().stream().sorted().collect(Collectors.toList()).forEach(t -> System.out.println(t));
 	}
 //	
 //	@Test
 //	public void testGetTissueSampleMapping()
 //	{
-//		H5ExpressionDataLoader.loadTissueTypeNames();
-//		H5ExpressionDataLoader.loadGeneNames();
+//		Archs4ExpressionDataLoader.loadTissueTypeNames();
+//		Archs4ExpressionDataLoader.loadGeneNames();
 //		
-//		Map<String, String> map = H5ExpressionDataLoader.getTissueToSamples();
+//		Map<String, String> map = Archs4ExpressionDataLoader.getTissueToSamples();
 //		for (String tissue : map.keySet().parallelStream().sorted().collect(Collectors.toList()))
 //		{
 //			System.out.println(tissue+"\t"+map.get(tissue));
@@ -234,22 +233,22 @@ public class TestH5Loader
 	@Test
 	public void getTissuesWithCounts()
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		Map<String, List<Integer>> tissueMap = H5ExpressionDataLoader.getTissueTypeToIndex();
+		Archs4ExpressionDataLoader.loadMetaData();
+		Map<String, List<Integer>> tissueMap = Archs4ExpressionDataLoader.getTissueTypeToIndex();
 		tissueMap.keySet().stream().sorted().forEach(t -> System.out.println(t + "\t" + tissueMap.get(t).size()));
 	}
 	
 	@Test
 	public void getSampleIDsIT()
 	{
-		H5ExpressionDataLoader.loadSampleIndices();
+		Archs4ExpressionDataLoader.loadSampleIndices();
 	}
 	
 	@Test
 	public void getExpressionValuesForTissueFromSampleIDFile() throws IOException
 	{
-		H5ExpressionDataLoader.loadMetaData();
-		int[][] expressionValues = H5ExpressionDataLoader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
+		Archs4ExpressionDataLoader.loadMetaData();
+		int[][] expressionValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
 		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
 		for (int i = 0; i < Math.min(10,expressionValues.length); i++)
 		{
