@@ -20,7 +20,7 @@ import org.junit.Test;
 import org.reactome.idg.loader.Archs4ExpressionDataLoader;
 
 @SuppressWarnings("static-method")
-public class TestH5Loader
+public class TestArchs4ExpressionDataLoader
 {
 	@BeforeClass
 	public static void setup()
