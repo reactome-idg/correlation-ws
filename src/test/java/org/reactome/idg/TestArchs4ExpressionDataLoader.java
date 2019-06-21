@@ -248,15 +248,33 @@ public class TestArchs4ExpressionDataLoader
 	public void getExpressionValuesForTissueFromSampleIDFile() throws IOException
 	{
 		Archs4ExpressionDataLoader.loadMetaData();
+		int[] sampleIndices = Archs4ExpressionDataLoader.getSampleIndicesForTissue(Paths.get("src/test/resources/heart.txt"));
 		int[][] expressionValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
 		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
-		for (int i = 0; i < Math.min(10,expressionValues.length); i++)
+
+		System.out.print("\t\t");
+		for (int i = 0; i < Math.min(expressionValues.length, 10); i++)
 		{
+			System.out.print(Archs4ExpressionDataLoader.getGeneIndicesToNames().get(i)+ "\t");
+		}
+		System.out.print("\n");
+		
+		
+		for (int i = 0; i < Math.min(expressionValues.length, 10); i++)
+		{
+			System.out.print(Archs4ExpressionDataLoader.getSampleIndexToID().get(sampleIndices[i])+"\t");
 			for (int j = 0; j < Math.min(10, expressionValues[i].length); j++)
 			{
 				System.out.print(expressionValues[i][j]+"\t");
 			}
 			System.out.print("\n");
 		}
+	}
+	
+	@Test
+	public void testGetGeneIndicesToNamesIT()
+	{
+		Archs4ExpressionDataLoader.loadMetaData();
+		assertTrue(Archs4ExpressionDataLoader.getGeneIndicesToNames().get(0).equals("A1BG"));
 	}
 }

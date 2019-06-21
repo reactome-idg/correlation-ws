@@ -24,11 +24,13 @@ public class Archs4ExpressionDataLoader
 	private static Set<String> tissueTypes = new HashSet<>();
 	// A mapping of gene name to row-index in expression dataset.
 	private static Map<String, Integer> geneIndices = new HashMap<>();
+	private static Map<Integer, String> geneIndicesToNames = new HashMap<>();
 	// A mapping of indices and the tissue type associated with it.
 	private static Map<Integer, String> indexOfTissues = new HashMap<>();
 	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
 	// keep track of the indices for sample IDs.
 	private static Map<String, Integer> sampleIdToIndex = new HashMap<>();
+	private static Map<Integer, String> sampleIndexToID = new HashMap<>();
 
 	private static int numberOfSamples ;
 	private static String hdfExpressionFile;
@@ -94,6 +96,20 @@ public class Archs4ExpressionDataLoader
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		return getExpressionValuesByIndices(indicesForTissue, tissue);
+	}
+	
+	public static int[] getSampleIndicesForTissue(Path tissueFileName) throws IOException
+	{
+		List<String> sampleIds = Files.readAllLines(tissueFileName);
+		int[] indicesForTissue = new int[sampleIds.size()];
+		int i = 0;
+		for (String sampleId : sampleIds)
+		{
+			indicesForTissue[i] = sampleIdToIndex.get(sampleId);
+			i ++;
+		}
+		return indicesForTissue;
+
 	}
 	
 	/**
@@ -237,6 +253,7 @@ public class Archs4ExpressionDataLoader
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
 			Archs4ExpressionDataLoader.sampleIdToIndex.put(str_data[indx].toString(), indx);
+			Archs4ExpressionDataLoader.sampleIndexToID.put(indx, str_data[indx].toString());
 		}
 		logger.info("Number of Sample IDs loaded: {}", Archs4ExpressionDataLoader.sampleIdToIndex.size());
 	}
@@ -249,6 +266,7 @@ public class Archs4ExpressionDataLoader
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
 			geneIndices.put(str_data[indx].toString(), indx);
+			geneIndicesToNames.put(indx, str_data[indx].toString());
 		}
 		logger.info("Number of genes loaded: {}", geneIndices.size());
 	}
@@ -451,5 +469,15 @@ public class Archs4ExpressionDataLoader
 		Archs4ExpressionDataLoader.loadGeneNames();
 		Archs4ExpressionDataLoader.loadTissueTypeNames();
 		Archs4ExpressionDataLoader.loadSampleIndices();
+	}
+
+	public static Map<Integer, String> getGeneIndicesToNames()
+	{
+		return geneIndicesToNames;
+	}
+
+	public static Map<Integer, String> getSampleIndexToID()
+	{
+		return sampleIndexToID;
 	}
 }
