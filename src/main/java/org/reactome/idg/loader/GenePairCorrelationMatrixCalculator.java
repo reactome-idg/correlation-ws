@@ -14,20 +14,13 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class GenePairCorrelationCalculator
+public class GenePairCorrelationMatrixCalculator
 {
 	private static final Logger logger = LogManager.getLogger();
-//	private String gene1;
-//	private String gene2;
 	private String tissue;
 	
-	private double[] gene1SampleValues;
-	private double[] gene2SampleValues;
-	
-	public GenePairCorrelationCalculator(String t, String hdfExpressionFile)
+	public GenePairCorrelationMatrixCalculator(String t, String hdfExpressionFile)
 	{
-//		this.gene1 = g1;
-//		this.gene2 = g2;
 		this.tissue = t;
 		Archs4ExpressionDataLoader.setHdfExpressionFileAndLoadCounts(hdfExpressionFile);
 		Archs4ExpressionDataLoader.loadMetaData();
@@ -35,8 +28,6 @@ public class GenePairCorrelationCalculator
 	
 	public double[][] calculateCorrelation() throws IOException
 	{
-		
-		
 		// We're assuming that "tissues" are names of files with tissue-specific sample IDs.
 		// outer index is sample, inner index is gene.
 		int[][] sampleValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
@@ -50,24 +41,24 @@ public class GenePairCorrelationCalculator
 		{
 			int numberOfSamples = sampleValues.length;
 			double[] geneSamples = new double[numberOfSamples];
+			// Build a list of sample values for a gene, for all the samples associated with the given tissue.
 			for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
 			{
 				geneSamples[sampleIndex] = sampleValues[sampleIndex][geneIndex];
 			}
+			// Now, for all OTHER genes...
 			for (int otherGeneIndex = geneIndex; otherGeneIndex < numberOfGenes - 1; otherGeneIndex ++)
 			{
 				double[] otherGeneSamples = new double[numberOfSamples];
+				// Build a list of sample values for the other gene, for all the samples associated with the given tissue.
 				for (int otherSampleIndex = 0; otherSampleIndex < numberOfSamples; otherSampleIndex++)
 				{
 					otherGeneSamples[otherSampleIndex] = sampleValues[otherSampleIndex][otherGeneIndex];
 				}
 				// now that we have a list of values for a gene, and for another gene, we can calculate the correlation:
-				String gene1, gene2;
-				gene1 = Archs4ExpressionDataLoader.getGeneIndicesToNames().get(geneIndex);
-				gene2 = Archs4ExpressionDataLoader.getGeneIndicesToNames().get(otherGeneIndex);
-
 				final int gIndx = geneIndex;
 				final int gOtherIndx = otherGeneIndex;
+				// Create a worker than will calculate the correlation for two lists of sample data.
 				Callable<Double> worker = new Callable<Double>()
 				{
 					@Override
@@ -80,11 +71,13 @@ public class GenePairCorrelationCalculator
 						{
 							corMatrix[gIndx][gOtherIndx] = correlationValue;
 						}
-						
+						// data gets saved into a shared array, so the return value won't really go anywhere.
 						return correlationValue;
 					}
 				};
 				workers.add(worker);
+				// When there are enough workers waiting, invoke them all. 10,000 seems to be the most optimal group size,
+				// on my workstation (8 cores x @~3GHz, 64 GB RAM)
 				if (workers.size() % 10000 == 0)
 				{
 //					logger.info("# workers: " + workers.size());
