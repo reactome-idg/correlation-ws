@@ -21,32 +21,30 @@ public class Archs4ExpressionDataLoader
 {
 	private static final Logger logger = LogManager.getLogger();
 	// Need a list of all Tissue-type names.
-	private static Set<String> tissueTypes = new HashSet<>();
+	private Set<String> tissueTypes = new HashSet<>();
 	// A mapping of gene name to row-index in expression dataset.
-	private static Map<String, Integer> geneIndices = new HashMap<>();
-	private static Map<Integer, String> geneIndicesToNames = new HashMap<>();
+	private Map<String, Integer> geneIndices = new HashMap<>();
+	private Map<Integer, String> geneIndicesToNames = new HashMap<>();
 	// A mapping of indices and the tissue type associated with it.
-	private static Map<Integer, String> indexOfTissues = new HashMap<>();
-	private static Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
+	private Map<Integer, String> indexOfTissues = new HashMap<>();
+	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
 	// keep track of the indices for sample IDs.
-	private static Map<String, Integer> sampleIdToIndex = new HashMap<>();
-	private static Map<Integer, String> sampleIndexToID = new HashMap<>();
+	private Map<String, Integer> sampleIdToIndex = new HashMap<>();
+	private Map<Integer, String> sampleIndexToID = new HashMap<>();
 
-	private static int numberOfSamples ;
-	private static String hdfExpressionFile;
+	private int numberOfSamples ;
+	private String hdfExpressionFile;
 	// Some data-set names we will be using.
-	private final static String expressionDSName = "/data/expression";
-	private final static String genesDSName = "/meta/genes";
-	private final static String tissueDSName = "/meta/Sample_source_name_ch1";
-	private final static String sampleIdDSName = "/meta/Sample_geo_accession";
+	private static String expressionDSName = "/data/expression";
+	private static String genesDSName = "/meta/genes";
+	private static String tissueDSName = "/meta/Sample_source_name_ch1";
+	private static String sampleIdDSName = "/meta/Sample_geo_accession";
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
-	private static int numberOfGenes ;
+	private int numberOfGenes ;
 
-	private Archs4ExpressionDataLoader()
+	public Archs4ExpressionDataLoader(String fileName)
 	{
-		// private constructor to prevent instantiation. The HDF library does NOT allow concurrent access to HDF files 
-		// so having multiple instances of this class could cause problems if they all try to access the file simultaneously.
-		// So everything here must be static!
+		this.hdfExpressionFile = fileName;
 	}
 
 	/**
@@ -55,7 +53,7 @@ public class Archs4ExpressionDataLoader
 	 * @param geneIndex - The index of a gene.
 	 * @return An array that contains the coordinates in the dataset of the expression data for a specific gene across all samples for the specified tissue.
 	 */
-	private static long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
+	private long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		long[][] elementCoords = new long[indicesForTissue.size()][2];
@@ -74,7 +72,7 @@ public class Archs4ExpressionDataLoader
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 * @throws IOException
 	 */
-	public static int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
+	public int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
 	{
 		List<String> sampleIds = Files.readAllLines(tissueFileName);
 		List<Integer> indicesForTissue = new ArrayList<>();
@@ -92,13 +90,13 @@ public class Archs4ExpressionDataLoader
 	 * @param tissue - The name of the tissue, as it is found in the dataset /meta/Sample_source_name_ch1
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 */
-	public static int[][] getExpressionValuesforTissue(String tissue)
+	public int[][] getExpressionValuesforTissue(String tissue)
 	{
 		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
 		return getExpressionValuesByIndices(indicesForTissue, tissue);
 	}
 	
-	public static int[] getSampleIndicesForTissue(Path tissueFileName) throws IOException
+	public int[] getSampleIndicesForTissue(Path tissueFileName) throws IOException
 	{
 		List<String> sampleIds = Files.readAllLines(tissueFileName);
 		int[] indicesForTissue = new int[sampleIds.size()];
@@ -118,7 +116,7 @@ public class Archs4ExpressionDataLoader
 	 * @param datasubsetName
 	 * @return
 	 */
-	private static int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
+	private int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
 	{
 //		List<Integer> indicesForTissue = sampleIdToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
@@ -206,7 +204,7 @@ public class Archs4ExpressionDataLoader
 	 * @param tissue - The name of the tissue.
 	 * @return
 	 */
-	public static int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
+	public int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
 	{
 		int geneIndex = geneIndices.get(gene);
 		
@@ -244,24 +242,24 @@ public class Archs4ExpressionDataLoader
 		return expressionValues;
 	}
 	
-	public static void loadSampleIndices()
+	public void loadSampleIndices()
 	{
-		Archs4ExpressionDataLoader.sampleIdToIndex = new HashMap<>();
+		this.sampleIdToIndex = new HashMap<>();
 		
-		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, Archs4ExpressionDataLoader.numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, this.numberOfSamples);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
-			Archs4ExpressionDataLoader.sampleIdToIndex.put(str_data[indx].toString(), indx);
-			Archs4ExpressionDataLoader.sampleIndexToID.put(indx, str_data[indx].toString());
+			this.sampleIdToIndex.put(str_data[indx].toString(), indx);
+			this.sampleIndexToID.put(indx, str_data[indx].toString());
 		}
-		logger.info("Number of Sample IDs loaded: {}", Archs4ExpressionDataLoader.sampleIdToIndex.size());
+		logger.info("Number of Sample IDs loaded: {}", this.sampleIdToIndex.size());
 	}
 
-	public static void loadGeneNames()
+	public void loadGeneNames()
 	{
-		Archs4ExpressionDataLoader.geneIndices = new HashMap<>();
-		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile, Archs4ExpressionDataLoader.genesDSName, Archs4ExpressionDataLoader.numberOfGenes);
+		this.geneIndices = new HashMap<>();
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.genesDSName, this.numberOfGenes);
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -271,17 +269,17 @@ public class Archs4ExpressionDataLoader
 		logger.info("Number of genes loaded: {}", geneIndices.size());
 	}
 	
-	public static Set<String> getTissueTypes()
+	public Set<String> getTissueTypes()
 	{
 		return tissueTypes;
 	}
 	
-	public static void loadTissueTypeNames()
+	public void loadTissueTypeNames()
 	{
-		Archs4ExpressionDataLoader.tissueTypeToIndex = new HashMap<>();
-		Archs4ExpressionDataLoader.indexOfTissues = new HashMap<>();
+		this.tissueTypeToIndex = new HashMap<>();
+		this.indexOfTissues = new HashMap<>();
 
-		StringBuffer[] str_data = HDFUtils.readDataSet(Archs4ExpressionDataLoader.hdfExpressionFile,tissueDSName, numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile,tissueDSName, numberOfSamples);
 		logger.info("Number of elements: ", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
@@ -418,24 +416,24 @@ public class Archs4ExpressionDataLoader
 //	}
 
 
-	public static Map<Integer, String> getIndexOfTissues()
+	public Map<Integer, String> getIndexOfTissues()
 	{
 		return indexOfTissues;
 	}
 
 
-	public static Map<String, List<Integer>> getTissueTypeToIndex()
+	public Map<String, List<Integer>> getTissueTypeToIndex()
 	{
 		return tissueTypeToIndex;
 	}
 
 
-	public static String getHdfExpressionFile()
+	public String getHdfExpressionFile()
 	{
 		return hdfExpressionFile;
 	}
 
-	public static Map<String, Integer> getGeneIndices()
+	public Map<String, Integer> getGeneIndices()
 	{
 		return geneIndices;
 	}
@@ -446,10 +444,9 @@ public class Archs4ExpressionDataLoader
 	 * genes and samples from the file.
 	 * @param hdfExpressionFile - the full path to the HDF file.
 	 */
-	public static void setHdfExpressionFileAndLoadCounts(String hdfExpressionFile)
+	public void loadCounts()
 	{
-		Archs4ExpressionDataLoader.hdfExpressionFile = hdfExpressionFile;
-		long file_id = H5.H5Fopen(Archs4ExpressionDataLoader.hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		long file_id = H5.H5Fopen(this.hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long[] dims = new long[2];
 		long[] maxdims = new long[2];
 		
@@ -464,19 +461,19 @@ public class Archs4ExpressionDataLoader
 	 * Loads various metadata: gene-name-to-index mapping, tissue names, tissue-index-to-names mapping,
 	 * tissue-names-to-indices mapping, sample-names-to-index mapping
 	 */
-	public static void loadMetaData()
+	public void loadMetaData()
 	{
-		Archs4ExpressionDataLoader.loadGeneNames();
-		Archs4ExpressionDataLoader.loadTissueTypeNames();
-		Archs4ExpressionDataLoader.loadSampleIndices();
+		this.loadGeneNames();
+		this.loadTissueTypeNames();
+		this.loadSampleIndices();
 	}
 
-	public static Map<Integer, String> getGeneIndicesToNames()
+	public Map<Integer, String> getGeneIndicesToNames()
 	{
 		return geneIndicesToNames;
 	}
 
-	public static Map<Integer, String> getSampleIndexToID()
+	public Map<Integer, String> getSampleIndexToID()
 	{
 		return sampleIndexToID;
 	}

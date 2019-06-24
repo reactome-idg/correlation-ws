@@ -14,24 +14,21 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class GenePairCorrelationMatrixCalculator
+public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 {
 	private static final Logger logger = LogManager.getLogger();
-	private String tissue;
 	
-	public GenePairCorrelationMatrixCalculator(String t, String hdfExpressionFile)
+	public GenePairCorrelationMatrixCalculator(String t, Archs4ExpressionDataLoader loader)
 	{
-		this.tissue = t;
-		Archs4ExpressionDataLoader.setHdfExpressionFileAndLoadCounts(hdfExpressionFile);
-		Archs4ExpressionDataLoader.loadMetaData();
+		super(t, loader);
 	}
 	
 	public double[][] calculateCorrelation() throws IOException
 	{
 		// We're assuming that "tissues" are names of files with tissue-specific sample IDs.
 		// outer index is sample, inner index is gene.
-		int[][] sampleValues = Archs4ExpressionDataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
-		int numberOfGenes = Archs4ExpressionDataLoader.getGeneIndices().size();
+		int[][] sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
+		int numberOfGenes = this.dataLoader.getGeneIndices().size();
 		double corMatrix[][] = new double[numberOfGenes][numberOfGenes];
 		ForkJoinPool pool = new ForkJoinPool();
 		List<Callable<Double>> workers = new ArrayList<>();
@@ -40,21 +37,14 @@ public class GenePairCorrelationMatrixCalculator
 		for (int geneIndex = 0; geneIndex < numberOfGenes - 1; geneIndex++)
 		{
 			int numberOfSamples = sampleValues.length;
-			double[] geneSamples = new double[numberOfSamples];
+//			double[] geneSamples = new double[numberOfSamples];
 			// Build a list of sample values for a gene, for all the samples associated with the given tissue.
-			for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)
-			{
-				geneSamples[sampleIndex] = sampleValues[sampleIndex][geneIndex];
-			}
+			final  double[] geneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, geneIndex, numberOfSamples);
 			// Now, for all OTHER genes...
 			for (int otherGeneIndex = geneIndex; otherGeneIndex < numberOfGenes - 1; otherGeneIndex ++)
 			{
-				double[] otherGeneSamples = new double[numberOfSamples];
-				// Build a list of sample values for the other gene, for all the samples associated with the given tissue.
-				for (int otherSampleIndex = 0; otherSampleIndex < numberOfSamples; otherSampleIndex++)
-				{
-					otherGeneSamples[otherSampleIndex] = sampleValues[otherSampleIndex][otherGeneIndex];
-				}
+//				double[] otherGeneSamples = new double[numberOfSamples];
+				final double[] otherGeneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, otherGeneIndex, numberOfSamples);
 				// now that we have a list of values for a gene, and for another gene, we can calculate the correlation:
 				final int gIndx = geneIndex;
 				final int gOtherIndx = otherGeneIndex;
