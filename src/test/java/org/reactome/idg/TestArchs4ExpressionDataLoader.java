@@ -26,35 +26,13 @@ public class TestArchs4ExpressionDataLoader
 	@BeforeClass
 	public static void setup()
 	{
-//		Archs4ExpressionDataLoader.loadCounts();
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
 	}
-	
-//	@Test
-//	public void testGetExpressionsForGene()
-//	{
-//		Archs4ExpressionDataLoader.getExpressionValuesForGene("AAA");
-//	}
-	
-//	@Test
-//	public void testH5LoaderTissueTypesIT()
-//	{
-//		Archs4ExpressionDataLoader.loadMetaData();
-//		assertNotNull(Archs4ExpressionDataLoader.getTissueTypes());
-//		assertNotNull(Archs4ExpressionDataLoader.getTissueTypeToIndex());
-//	}
-//	
-//	@Test
-//	public void testH5LoaderGeneNamesIT()
-//	{
-//		Archs4ExpressionDataLoader.loadMetaData();
-//		assertNotNull(Archs4ExpressionDataLoader.getGeneIndices());
-//	}
+
 	
 	@Test
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
-//		Archs4ExpressionDataLoader.loadMetaData();
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
 		int expressionValues[] = loader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
@@ -200,7 +178,6 @@ public class TestArchs4ExpressionDataLoader
 	public void getExpressionValuesForTissueFromSampleIDFile() throws IOException
 	{
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
-//		Archs4ExpressionDataLoader.loadMetaData();
 		int[] sampleIndices = loader.getSampleIndicesForTissue(Paths.get("src/test/resources/heart.txt"));
 		int[][] expressionValues = loader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
 		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);

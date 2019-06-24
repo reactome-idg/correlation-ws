@@ -3,6 +3,11 @@ package org.reactome.idg.loader;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Creates instances of Archs4ExpressionDataLoader
+ * @author sshorser
+ *
+ */
 public class Archs4ExpressionDataLoaderFactory
 {
 	// there could be multiple files, but there should only be ONE loader per file.
@@ -13,6 +18,13 @@ public class Archs4ExpressionDataLoaderFactory
 		// private constructor.
 	}
 	
+	/**
+	 * Creates a new data loader for an HDF file. If a loader for this file
+	 * has already been created, then that loader will be returned. If no loader
+	 * has been created, then a new loader will be created and returned.
+	 * @param pathToFile
+	 * @return
+	 */
 	public static Archs4ExpressionDataLoader buildInstanceForHDFFile(String pathToFile)
 	{
 		if (loaders.containsKey(pathToFile))

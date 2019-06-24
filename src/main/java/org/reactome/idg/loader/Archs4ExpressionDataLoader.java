@@ -118,7 +118,6 @@ public class Archs4ExpressionDataLoader
 	 */
 	private int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
 	{
-//		List<Integer> indicesForTissue = sampleIdToIndex.get(tissue);
 		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
 		logger.info("Tissue indices: {}", indices.toString());
 		int[][] expressionValues = new int[numberOfGenes][indices.size()];
@@ -222,9 +221,7 @@ public class Archs4ExpressionDataLoader
 			logger.error("Error selecting elements! response code: {}",status);
 			return null;
 		}
-//		long[] start = new long[2];
-//		long[] end = new long[2];
-//		H5.H5Sget_select_bounds(space_id, start, end);
+
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
 		
