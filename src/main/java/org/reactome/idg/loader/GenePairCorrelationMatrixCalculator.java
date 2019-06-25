@@ -39,13 +39,14 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 	 * mirror image of the upper half). The matrix will be N x N, where N = number of genes in HDF file.
 	 * @throws IOException
 	 */
-	public double[][] calculateCorrelation() throws IOException
+	public RealMatrix calculateCorrelation() throws IOException
 	{
 		// We're assuming that "tissues" are names of files with tissue-specific sample IDs.
 		// outer index is sample, inner index is gene.
 		int[][] sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
 		int numberOfGenes = this.dataLoader.getGeneIndices().size();
-		double corMatrix[][] = new double[numberOfGenes][numberOfGenes];
+//		double corMatrix[][] = new double[numberOfGenes][numberOfGenes];
+		RealMatrix corMatrix = new Array2DRowRealMatrix(numberOfGenes, numberOfGenes);
 		ForkJoinPool pool = new ForkJoinPool();
 		List<Callable<Double>> workers = new ArrayList<>();
 		AtomicInteger calculationsPerformed = new AtomicInteger(0);
@@ -73,7 +74,8 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 						calculationsPerformed.getAndIncrement();
 						synchronized (corMatrix)
 						{
-							corMatrix[gIndx][gOtherIndx] = correlationValue;
+//							corMatrix[gIndx][gOtherIndx] = correlationValue;
+							corMatrix.setEntry(gIndx, gOtherIndx, correlationValue);
 						}
 						// data gets saved into a shared array, so the return value won't really go anywhere.
 						return correlationValue;

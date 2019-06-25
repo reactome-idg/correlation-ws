@@ -17,6 +17,16 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	private static int[][] cachedExprValues;
 	
 	/**
+	 * Creates a calculator without specify the genes.
+	 * @param t
+	 * @param loader
+	 */
+	public GenePairCorrelationCalculator(String t, Archs4ExpressionDataLoader loader)
+	{
+		super(t, loader);
+	}
+	
+	/**
 	 * Creates a new calculator that will calculate the correlation for a singel gene pair.
 	 * @param t - the path to the tissue sample file.
 	 * @param gene1 - the first gene.

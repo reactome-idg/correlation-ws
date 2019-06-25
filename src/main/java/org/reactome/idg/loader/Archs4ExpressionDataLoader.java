@@ -42,6 +42,8 @@ public class Archs4ExpressionDataLoader
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
 	private int numberOfGenes ;
 
+	private static Map<String,Object> expressionValuesCache = new HashMap<>();
+	
 	public Archs4ExpressionDataLoader(String fileName)
 	{
 		this.hdfExpressionFile = fileName;
@@ -72,17 +74,27 @@ public class Archs4ExpressionDataLoader
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 * @throws IOException
 	 */
-	public int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
+	public synchronized int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
 	{
-		List<String> sampleIds = Files.readAllLines(tissueFileName);
-		List<Integer> indicesForTissue = new ArrayList<>();
-		for (String sampleId : sampleIds)
+		if (expressionValuesCache.containsKey(tissueFileName.toString()))
 		{
-			indicesForTissue.add(sampleIdToIndex.get(sampleId));
+			logger.info("expression values found in cache for {}", tissueFileName.toString());
+			return (int[][]) expressionValuesCache.get(tissueFileName.toString());
 		}
-		String tissueName = tissueFileName.getFileName().toString();
-		return getExpressionValuesByIndices(indicesForTissue, tissueName);
-		
+		else
+		{
+			logger.info("Nothing in expression value cache for {}, loading it now...", tissueFileName.toString());
+			List<String> sampleIds = Files.readAllLines(tissueFileName);
+			List<Integer> indicesForTissue = new ArrayList<>();
+			for (String sampleId : sampleIds)
+			{
+				indicesForTissue.add(sampleIdToIndex.get(sampleId));
+			}
+			String tissueName = tissueFileName.getFileName().toString();
+			int[][] values = getExpressionValuesByIndices(indicesForTissue, tissueName);
+			expressionValuesCache.put(tissueFileName.toString(), values);
+			return values;
+		}
 	}
 
 	/**
@@ -90,10 +102,21 @@ public class Archs4ExpressionDataLoader
 	 * @param tissue - The name of the tissue, as it is found in the dataset /meta/Sample_source_name_ch1
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 */
-	public int[][] getExpressionValuesforTissue(String tissue)
+	public synchronized int[][] getExpressionValuesforTissue(String tissue)
 	{
-		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
-		return getExpressionValuesByIndices(indicesForTissue, tissue);
+		if (expressionValuesCache.containsKey(tissue))
+		{
+			logger.info("expression values found in cache for {}", tissue);
+			return (int[][])expressionValuesCache.get(tissue);
+		}
+		else
+		{
+			logger.info("Nothing in expression value cache for {}, loading it now...", tissue);
+			List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
+			int[][] values = getExpressionValuesByIndices(indicesForTissue, tissue);
+			expressionValuesCache.put(tissue, values);
+			return values;	
+		}
 	}
 	
 	public int[] getSampleIndicesForTissue(Path tissueFileName) throws IOException
@@ -116,7 +139,7 @@ public class Archs4ExpressionDataLoader
 	 * @param datasubsetName
 	 * @return
 	 */
-	private int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
+	private synchronized int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
 	{
 		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
 		logger.info("Tissue indices: {}", indices.toString());
