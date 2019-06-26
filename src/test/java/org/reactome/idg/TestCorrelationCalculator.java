@@ -13,11 +13,20 @@ import java.util.List;
 import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.math3.exception.OutOfRangeException;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.junit.Test;
@@ -87,100 +96,13 @@ public class TestCorrelationCalculator
 		}
 	}
 	
-//	double[][] cor;
-	
-	class CorrelationCalculatorWorker implements Runnable
-	{
-		Queue<String> inQ;
-		Queue<String> outQ;
-		boolean done = false;
-		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
-		GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator("src/test/resources/heart.txt", loader);
-		
-		public CorrelationCalculatorWorker(Queue<String> i, Queue<String> o)
-		{
-			this.inQ = i;
-			this.outQ = o;
-		}
-		
-		public void end()
-		{
-			this.done = true;
-		}
-		
-		@Override
-		public void run()
-		{
-			while (!done)
-			{
-				String pair = inQ.poll();
-				if (pair != null)
-				{
-					try
-					{
-						String[] parts = pair.split("\\|");
-						double d = calculator.calculateGenePairCorrelation(parts[0], parts[1]);
-						outQ.add(pair + "|" + Double.toString(d) + "\n");
-					}
-					catch (IOException e)
-					{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-	}
-	
-	class CorrelationWriterWorker implements Runnable
-	{
-		Queue<String> inQ;
-		FileWriter writer;
-		boolean done = false;
-		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
 
-		public CorrelationWriterWorker(Queue<String> i, FileWriter w)
-		{
-			this.inQ = i;
-			this.writer = w;
-		}
-		
-		public void end()
-		{
-			this.done = true;
-		}
-		
-		@Override
-		public void run()
-		{
-			while (!done)
-			{
-				String data = inQ.poll();
-//				String[] parts = data.split("\\|");
-//				int i = loader.getGeneIndices().get(parts[0]);
-//				int j = loader.getGeneIndices().get(parts[1]);
-//				synchronized(cor)
-//				{
-//					cor[i][j] = Double.parseDouble(parts[2]);
-//				}
-				if (data != null)
-				{
-					try
-					{
-						writer.write(data);
-					}
-					catch (IOException e)
-					{
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-		
-	}
-	
+	/*
+	 * JVM args used:
+	 * -ea -Xms20G -XX:+UseParallelGC
+	 */
 	@Test
-	public void testGenePairCalculatorAllGenesIT() throws InterruptedException, IOException
+	public void testGenePairCalculatorAllGenesIT() throws InterruptedException, IOException, OutOfRangeException, ExecutionException
 	{
 		// create a gene-pair list and then run GenePairCorrelationCalculator for each pair. See if it's an faster than the other method.
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
@@ -192,95 +114,100 @@ public class TestCorrelationCalculator
 		// RealMatrix is a little faster to use in this context than double[][] 
 		RealMatrix cor = new Array2DRowRealMatrix(numGenes, numGenes);
 //		double[][] cor = new double[numGenes][numGenes];
-		Queue<String> genePairQueue = new ArrayBlockingQueue<>(numPairs, false);
-		Queue<String> genePairCorrelationQueue = new ArrayBlockingQueue<>(numPairs, false);
+//		Queue<String> genePairQueue = new ArrayBlockingQueue<>(numPairs, false);
+//		Queue<String> genePairCorrelationQueue = new ArrayBlockingQueue<>(numPairs, false);
 		List<Runnable> calculators = new ArrayList<>();
 		List<Runnable> writers = new ArrayList<>();
 //		GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator("src/test/resources/heart.txt", loader);
 		try(FileWriter fileWriter = new FileWriter("/media/sshorser/data/correlations_test", true);)
 		{
 			System.out.println("getCommonPoolParallelism: " + ForkJoinPool.getCommonPoolParallelism());
-			ExecutorService calcExecService = Executors.newCachedThreadPool();
-			ExecutorService writeExecService = Executors.newCachedThreadPool();
-			for (int j = 0; j < 2; j++)
-			{
-//				CorrelationCalculatorWorker worker = new CorrelationCalculatorWorker(genePairQueue, genePairCorrelationQueue);
-				Runnable worker = new Runnable()
-				{
-					@Override
-					public void run()
-					{
-						GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator("src/test/resources/heart.txt", loader);
-						while (true)
+			BlockingQueue<Runnable> q = new LinkedBlockingQueue<>(10000000);
+			//			ExecutorService calcExecService = Executors.newWorkStealingPool();
+//			ExecutorService writeExecService = Executors.newWorkStealingPool();
+			ThreadPoolExecutor execService = new ThreadPoolExecutor(ForkJoinPool.getCommonPoolParallelism() / 2, ForkJoinPool.getCommonPoolParallelism() * 2, 10, TimeUnit.SECONDS, q);
+			
+			/*
+						for (int j = 0; j < 4; j++)
 						{
-							String pair = genePairQueue.poll();
-							if (pair != null)
+			//				CorrelationCalculatorWorker worker = new CorrelationCalculatorWorker(genePairQueue, genePairCorrelationQueue);
+							Runnable worker = new Runnable()
 							{
-	//								System.out.println("Got pair: "+pair);
-								try
+								@Override
+								public void run()
 								{
-									String[] parts = pair.split("\\|");
-									double d = calculator.calculateGenePairCorrelation(parts[0], parts[1]);
-									genePairCorrelationQueue.add(pair + "|" + Double.toString(d) + "\n");
+									GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator("src/test/resources/heart.txt", loader);
+									while (true)
+									{
+										String pair = genePairQueue.poll();
+										if (pair != null)
+										{
+				//								System.out.println("Got pair: "+pair);
+											try
+											{
+												String[] parts = pair.split("\\|");
+												double d = calculator.calculateGenePairCorrelation(parts[0], parts[1]);
+												genePairCorrelationQueue.add(pair + "|" + Double.toString(d) + "\n");
+											}
+											catch (IOException e)
+											{
+												e.printStackTrace();
+											}
+										}
+									}
 								}
-								catch (IOException e)
-								{
-									e.printStackTrace();
-								}
-							}
+							};
+							calcExecService.execute(worker);
+							calculators.add(worker);
 						}
-					}
-				};
-				calcExecService.execute(worker);
-				calculators.add(worker);
-			}
-			System.out.println("# calculators: " + calculators.size());
-			for (int j = 0; j < 2; j++)
-			{
-//				CorrelationWriterWorker worker = new CorrelationWriterWorker(genePairCorrelationQueue, fileWriter);
-				Runnable worker = new Runnable()
-				{
-					@Override
-					public void run()
-					{
-						while (true)
+						System.out.println("# calculators: " + calculators.size());
+						for (int j = 0; j < 2; j++)
 						{
-							String data = genePairCorrelationQueue.poll();
-							if (data != null)
+			//				CorrelationWriterWorker worker = new CorrelationWriterWorker(genePairCorrelationQueue, fileWriter);
+							Runnable worker = new Runnable()
 							{
-//								System.out.println("Got data: "+data);
-								String[] parts = data.split("\\|");
-								int x = loader.getGeneIndices().get(parts[0]);
-								int y = loader.getGeneIndices().get(parts[1]);
-								synchronized (cor)
+								@Override
+								public void run()
 								{
-//									cor[x][y] = Double.parseDouble(parts[2]);
-									cor.setEntry(x, y, Double.parseDouble(parts[2]));
+									while (true)
+									{
+										String data = genePairCorrelationQueue.poll();
+										if (data != null)
+										{
+			//								System.out.println("Got data: "+data);
+											String[] parts = data.split("\\|");
+											int x = loader.getGeneIndices().get(parts[0]);
+											int y = loader.getGeneIndices().get(parts[1]);
+											synchronized (cor)
+											{
+			//									cor[x][y] = Double.parseDouble(parts[2]);
+												cor.setEntry(x, y, Double.parseDouble(parts[2]));
+											}
+											
+											
+				//							synchronized(fileWriter)
+			//								{
+			//									try
+			//									{
+			//										fileWriter.write(data);
+			//									}
+			//									catch (IOException e)
+			//									{
+			//										e.printStackTrace();
+			//										throw new Error(e.getMessage());
+			//									}
+			//								}
+										}
+									}
 								}
-								
-								
-	//							synchronized(fileWriter)
-//								{
-//									try
-//									{
-//										fileWriter.write(data);
-//									}
-//									catch (IOException e)
-//									{
-//										e.printStackTrace();
-//										throw new Error(e.getMessage());
-//									}
-//								}
-							}
-						}
-					}
-				};
-				writeExecService.execute(worker);
-				writers.add(worker);
-			}
+							};
+							writeExecService.execute(worker);
+							writers.add(worker);
+						}*/
 			System.out.println("# writers: " + writers.size());
 			System.out.println("building gene-pair list...");
 			LocalDateTime beforeRestStart = LocalDateTime.now();
+			GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator("src/test/resources/heart.txt", loader);
 			for (int outer = 0; outer < numGenes; outer ++)
 			{
 				for (int inner = outer; inner < numGenes; inner++)
@@ -288,7 +215,50 @@ public class TestCorrelationCalculator
 	//				String gene = loader.getGeneIndicesToNames().get(outer);
 	//				String gene2 = loader.getGeneIndicesToNames().get(inner);
 	//				genePairs[i] = loader.getGeneIndicesToNames().get(outer) + "|" + loader.getGeneIndicesToNames().get(inner);
-					genePairQueue.add(loader.getGeneIndicesToNames().get(outer) + "|" + loader.getGeneIndicesToNames().get(inner));
+//					genePairQueue.add(loader.getGeneIndicesToNames().get(outer) + "|" + loader.getGeneIndicesToNames().get(inner));
+					final int indx1 = outer;
+					final int indx2 = inner;
+					Callable<Double> calcWorker = new Callable<Double>()
+					{
+						
+						@Override
+						public Double call() throws Exception
+						{
+							try
+							{
+								double d = calculator.calculateGenePairCorrelation(loader.getGeneIndicesToNames().get(indx1), loader.getGeneIndicesToNames().get(indx2));
+								synchronized(cor)
+								{
+									cor.setEntry(indx1, indx2, d);
+								}
+								return d;
+							}
+							catch (IOException e)
+							{
+								e.printStackTrace();
+								throw new RuntimeException(e);
+							}
+						}
+					};
+					// sleep when capacity gets low. Should prevent GC thrashing...
+//					while (execService.getQueue().remainingCapacity() < 100)
+//					{
+//						Thread.sleep(1000);
+//					}
+//					execService.submit(calcWorker);
+//					if (execService.getQueue().size() % 100 == 0)
+//					{
+//						System.out.println("queue size: " + execService.getQueue().size());
+//					}
+//					if (execService.getQueue().size() > 10000000)
+//					{
+//						Thread.sleep(10);
+//					}
+//					
+//					cor.setEntry(indx1, indx2, execService.submit(calcWorker).get());
+
+					
+					
 //					calculators.forEach(c -> c.run());
 //					genePairQueue.notify();
 					i++;
@@ -300,31 +270,35 @@ public class TestCorrelationCalculator
 //					}
 					if (i % 1000000 == 0)
 					{
-						System.out.println(i/1000000 + " M ; pairs in queue to calculate: " + genePairQueue.size()
-											+ "; pairs in queue to write: " + genePairCorrelationQueue.size());
+//						System.out.println(i/1000000 + " M ; pairs in queue to calculate: " + genePairQueue.size()
+//											+ "; pairs in queue to write: " + genePairCorrelationQueue.size());
+						System.out.println(LocalDateTime.now().toString() + "\t\t" + i/1000000 + " M\t" + " queue size: " + execService.getQueue().size());
 					}
 					// if the genePairQ gets too big, rest a moment so that the workers can catch up. Otherwise, the system runs slower and slower....
-					if (genePairQueue.size() > 500000/*10000000*/)
+/*
+					if (genePairQueue.size() > 1000)
 					{
 						LocalDateTime beforeRestEnd = LocalDateTime.now();
-						System.out.println("Time since last rest " + Duration.between(beforeRestStart, beforeRestEnd).toString());
+//						System.out.println("Time since last rest " + Duration.between(beforeRestStart, beforeRestEnd).toString());
 						
 						LocalDateTime start = LocalDateTime.now();
-						System.out.println("Letting GenePair queue drain...");
+//						System.out.println("Letting GenePair queue drain...");
 						while (genePairQueue.size() > 0)
 						{
 							Thread.sleep(50);
 						}
 						LocalDateTime end = LocalDateTime.now();
-						System.out.println("Elapsed time to drain queue: " + Duration.between(start, end).toString());
+//						System.out.println("Elapsed time to drain queue: " + Duration.between(start, end).toString());
 						beforeRestStart = LocalDateTime.now();
 					}
+*/
 				}
 			}
 //			calculators.forEach(c->c.end());
 //			writers.forEach(w->w.end());
-			calcExecService.shutdown();
-			writeExecService.shutdown();
+//			calcExecService.shutdown();
+//			writeExecService.shutdown();
+			execService.shutdown();
 		}
 	}
 }
