@@ -78,7 +78,7 @@ public class Archs4ExpressionDataLoader
 	{
 		if (expressionValuesCache.containsKey(tissueFileName.toString()))
 		{
-			logger.info("expression values found in cache for {}", tissueFileName.toString());
+			logger.trace("expression values found in cache for {}", tissueFileName.toString());
 			return (int[][]) expressionValuesCache.get(tissueFileName.toString());
 		}
 		else
@@ -106,7 +106,7 @@ public class Archs4ExpressionDataLoader
 	{
 		if (expressionValuesCache.containsKey(tissue))
 		{
-			logger.info("expression values found in cache for {}", tissue);
+			logger.trace("expression values found in cache for {}", tissue);
 			return (int[][])expressionValuesCache.get(tissue);
 		}
 		else

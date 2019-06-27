@@ -72,9 +72,8 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 						PearsonsCorrelation cor = new PearsonsCorrelation();
 						double correlationValue = cor.correlation(geneSamples, otherGeneSamples);
 						calculationsPerformed.getAndIncrement();
-						synchronized (corMatrix)
+//						synchronized (corMatrix)
 						{
-//							corMatrix[gIndx][gOtherIndx] = correlationValue;
 							corMatrix.setEntry(gIndx, gOtherIndx, correlationValue);
 						}
 						// data gets saved into a shared array, so the return value won't really go anywhere.
@@ -84,7 +83,7 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 				workers.add(worker);
 				// When there are enough workers waiting, invoke them all. 10,000 seems to be the most optimal group size,
 				// on my workstation (8 cores x @~3GHz, 64 GB RAM)
-				if (workers.size() % 10000 == 0)
+				if (workers.size() % 5000 == 0)
 				{
 //					logger.info("# workers: " + workers.size());
 					pool.invokeAll(workers);

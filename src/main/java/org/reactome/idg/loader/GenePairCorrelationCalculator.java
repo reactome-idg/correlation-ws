@@ -52,7 +52,6 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	{
 		this.gene1 = g1;
 		this.gene2 = g2;
-		this.verifyGenes();
 		return this.calculateGenePairCorrelation();
 	}
 	
@@ -65,6 +64,7 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	{
 		this.verifyGenes();
 		int[][] sampleValues = new int[1][1];
+		// if the tissue has changed, we'll need to load new values into the cache.
 		if (!this.tissue.equals(currentTissue))
 		{
 			currentTissue = this.tissue;
@@ -73,25 +73,28 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 		}
 		else
 		{
+			// if there is a cache then use it.
 			if (cachedExprValues != null)
 			{
 				sampleValues = cachedExprValues;
 			}
+			else 
+			{
+				// this code path probably isn't possible, since the current and previous tissues are already known to match, meaning the samples have probaby already been loaded.
+				sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
+				cachedExprValues = sampleValues;
+			}
 		}
 		int numberOfSamples = sampleValues.length;
-
-		
+		// get indices of the genes.
 		int geneIndex = this.dataLoader.getGeneIndices().get(this.gene1);
 		int otherGeneIndex = this.dataLoader.getGeneIndices().get(this.gene2);
-		
+		// get the sample values for the two genes.
 		final double[] geneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, geneIndex, numberOfSamples);
 		final double[] otherGeneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, otherGeneIndex, numberOfSamples);
-		
-		
-		
+		// calculate the Pearson's Correlation for the two sets of values, and return the correlation value.
 		PearsonsCorrelation cor = new PearsonsCorrelation();
 		double correlationValue = cor.correlation(geneSamples, otherGeneSamples);
-		
 		return correlationValue;
 	}
 	
