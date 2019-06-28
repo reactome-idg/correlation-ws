@@ -5,6 +5,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.Temporal;
@@ -48,6 +50,24 @@ public class TestCorrelationCalculator
 			for (int j = 0; j < Math.min(m.getRowDimension(), 20); j++)
 			{
 				System.out.print(m.getEntry(i, j) + "\t");
+			}
+			System.out.println();
+		}
+	}
+	
+	@Test
+	public void testCorrelationCalculationsAdiposeIT() throws IOException
+	{
+		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
+		GenePairCorrelationMatrixCalculator heartCorMatrixCalculator = new GenePairCorrelationMatrixCalculator("src/test/resources/adipose.txt", loader);
+		
+		RealMatrix m = heartCorMatrixCalculator.calculateCorrelation();
+		NumberFormat formatter = new DecimalFormat("#0.0000");
+		for (int i = 0; i < Math.min(m.getColumnDimension(), 20); i++)
+		{
+			for (int j = 0; j < Math.min(m.getRowDimension(), 20); j++)
+			{
+				System.out.print( formatter.format(m.getEntry(i, j)) + "\t");
 			}
 			System.out.println();
 		}

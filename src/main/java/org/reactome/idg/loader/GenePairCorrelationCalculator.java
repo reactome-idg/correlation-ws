@@ -7,6 +7,11 @@ import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * Can be used to calculate the correlation between two specific genes, for a specific tissue.
+ * @author sshorser
+ *
+ */
 public class GenePairCorrelationCalculator extends CorrelationCalculator
 {
 
