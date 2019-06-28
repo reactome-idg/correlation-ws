@@ -32,3 +32,6 @@ target/
 .classpath
 
 .clover
+
+.attach_pid*
+
