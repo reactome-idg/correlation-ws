@@ -45,6 +45,18 @@ public class AppConfig {
 	@Autowired
 	private Environment env;
 
+	@Bean(name="dbName")
+	public String getDbName()
+	{
+		return env.getProperty("mysql.db_name");
+	}
+	
+	@Bean(name="chunkSize")
+	public String getChunkSize()
+	{
+		return env.getProperty("chunkSize");
+	}
+	
 	@Bean(name = "sessionFactory", autowireCandidate = true)
 	public LocalSessionFactoryBean getSessionFactory()
 	{
@@ -99,6 +111,7 @@ public class AppConfig {
 		dataSource.setUrl(env.getProperty("mysql.url"));
 		dataSource.setUser(env.getProperty("mysql.user"));
 		dataSource.setPassword(env.getProperty("mysql.password"));
+		dataSource.setDatabaseName(env.getProperty("mysql.db_name"));
 		return dataSource;
 	}
 
@@ -110,7 +123,7 @@ public class AppConfig {
 		return transactionManager;
 	}
 	
-	// The "dao" bean is a protoype for the DAO-pool. Don't try to use this bean directly, requeste a DAO from "daoPool" via getTarget();
+	// The "dao" bean is a protoype for the DAO-pool. Don't try to use this bean directly, request a DAO from "daoPool" via getTarget();
 	@Bean(name = "dao")
 	@Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 	public GeneCorrelationDAOImpl getDao()
@@ -145,7 +158,7 @@ public class AppConfig {
 	@Bean(name= "archs4Loader")
 	public Archs4Loader getArchs4Loader()
 	{
-		return new Archs4Loader(env.getProperty("files.archs4"));
+		return new Archs4Loader(env.getProperty("files.archs4.correlation_file"));
 	}
 	
 }

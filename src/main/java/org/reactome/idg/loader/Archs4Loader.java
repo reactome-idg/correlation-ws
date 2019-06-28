@@ -42,15 +42,16 @@ public class Archs4Loader
 	
 	private static final String PATH_TO_TMP_FILE = "/tmp/data_for_idg";
 
-	private static final int CHUNK_SIZE = 1000000;
+	@Autowired
+	private int chunkSize;
 	
 	private String filePath;
 	
 	@Autowired
-	GeneCorrelationDAO dao;
+	private GeneCorrelationDAO dao;
 	
 	@Autowired
-	ProvenanceDAO provenanceDao;
+	private ProvenanceDAO provenanceDao;
 	
 	@Autowired
 	CommonsPool2TargetSource daoPool;
@@ -149,7 +150,7 @@ public class Archs4Loader
 									writer.flush();
 								}
 
-								if (lineCount % CHUNK_SIZE == 0)
+								if (lineCount % chunkSize == 0)
 								{
 									// Now it's time to load the file to the database.
 									writer.flush();

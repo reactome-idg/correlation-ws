@@ -34,7 +34,9 @@ public class GeneCorrelationDAOImpl implements GeneCorrelationDAO
 	private int numTxOps = 0;
 	private int batchSize = 100;
 	// TODO: get dbname from config.
-	private String dbName = "correlation_db";
+	
+	@Autowired
+	private String dbName; // = "correlation_db";
 	
 	private Transaction addGeneTx;
 	
