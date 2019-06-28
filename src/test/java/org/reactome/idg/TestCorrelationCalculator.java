@@ -3,6 +3,7 @@ package org.reactome.idg;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -52,6 +53,25 @@ public class TestCorrelationCalculator
 				System.out.print(m.getEntry(i, j) + "\t");
 			}
 			System.out.println();
+		}
+		String pathToOutfile = "/media/sshorser/data/reactome/IDGFiles/heart.dat";
+		try(FileWriter writer = new FileWriter(pathToOutfile);)
+		{
+			int entryCount = 0;
+			for (int i = 0; i < m.getColumnDimension(); i++)
+			{
+				for (int j = i; j < m.getRowDimension(); j++)
+				{
+					String gene1 = loader.getGeneIndicesToNames().get(i);
+					String gene2 = loader.getGeneIndicesToNames().get(j);
+					writer.write(gene1 + "\t" + gene2 + "\t" + m.getEntry(i, j) + "\n");
+					entryCount++;
+					if (entryCount % 10000000 == 0)
+					{
+						System.out.println(entryCount + " correlations written to file");
+					}
+				}
+			}
 		}
 	}
 	

@@ -83,7 +83,7 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 				workers.add(worker);
 				// When there are enough workers waiting, invoke them all. 10,000 (or maybe 5,000?) seems to be the most optimal group size,
 				// on my workstation (8 cores x @~3GHz, 64 GB RAM)
-				if (workers.size() % 5000 == 0)
+				if (workers.size() % (pool.getParallelism() * 10000) == 0)
 				{
 					pool.invokeAll(workers);
 					workers.clear();
