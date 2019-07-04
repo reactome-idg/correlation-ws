@@ -10,8 +10,11 @@ import org.reactome.idg.model.Provenance;
  * @author sshorser
  *
  */
+// I now realize that the amount of data is probably WAY too much to store in memory, so this interface and its implementations may change significantly or
+// go away entirely.
 public interface DataRepository
 {
+	// We may not be storing data keyed by UniProt accession so this enum may eventually be removed.
 	public enum LookupKeyType
 	{
 		GENE_SYMBOL, UNIPROT_ACCESSION;
