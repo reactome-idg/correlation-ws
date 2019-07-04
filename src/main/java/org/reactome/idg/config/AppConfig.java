@@ -52,9 +52,9 @@ public class AppConfig {
 	}
 	
 	@Bean(name="chunkSize")
-	public String getChunkSize()
+	public int getChunkSize()
 	{
-		return env.getProperty("chunkSize");
+		return Integer.parseInt(env.getProperty("chunkSize","1000000"));
 	}
 	
 	@Bean(name = "sessionFactory", autowireCandidate = true)

@@ -44,7 +44,7 @@ public class GenePairCorrelation
 	@Column(name = "gene_2", nullable = false, length = 40)
 	private String gene2;
 	
-	@Column(name = "correlation_value", nullable = false)
+	@Column(name = "correlation_value", nullable = false, columnDefinition = "DOUBLE PRECISION(7,6)")
 	private double correlationValue;
 	
 	@JoinColumn(name = "provenance_id", foreignKey = @ForeignKey(value = ConstraintMode.CONSTRAINT), nullable = false)

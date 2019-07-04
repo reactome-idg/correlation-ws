@@ -44,7 +44,7 @@ public class Archs4ExpressionDataLoader
 
 	private static Map<String,Object> expressionValuesCache = new HashMap<>();
 	
-	public Archs4ExpressionDataLoader(String fileName)
+	Archs4ExpressionDataLoader(String fileName)
 	{
 		this.hdfExpressionFile = fileName;
 	}

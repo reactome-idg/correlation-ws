@@ -9,10 +9,9 @@ import org.reactome.idg.config.AppConfig;
 import org.reactome.idg.loader.Archs4Loader;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+@SuppressWarnings("static-method")
 public class TestArchs4Loader
 {
-
-	@SuppressWarnings("static-method")
 	@Test
 	public void testLoadDataIT()
 	{
