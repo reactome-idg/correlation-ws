@@ -21,14 +21,16 @@ public class HarmonizomeDataDownloader
 	private URI urlToFile;
 	private String datasetName;
 	private String dataCategory;
+	private String downloadPath;
 	
 	private static final Logger logger = LogManager.getLogger();
 	
-	public HarmonizomeDataDownloader(URI url, String name, String category)
+	public HarmonizomeDataDownloader(URI url, String name, String category, String downloadPath)
 	{
 		this.urlToFile = url;
 		this.datasetName = name;
 		this.dataCategory = category;
+		this.downloadPath = downloadPath;
 	}
 	
 	public void downloadFile() throws ClientProtocolException, IOException
@@ -43,7 +45,7 @@ public class HarmonizomeDataDownloader
 					byte[] b = EntityUtils.toByteArray(response.getEntity());
 					String[] parts = this.urlToFile.getPath().split("/");
 					String fileName = parts[parts.length-1];
-					String outputPath = "/tmp/"+this.datasetName+fileName;
+					String outputPath = this.downloadPath + "/" +this.datasetName+fileName;
 					Files.write(Paths.get(outputPath), b);
 					logger.info("Data from {} has been downloaded to {}", this.urlToFile.toString(), outputPath);
 				}

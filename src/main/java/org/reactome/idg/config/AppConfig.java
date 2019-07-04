@@ -70,11 +70,11 @@ public class AppConfig {
 	{
 		List<HarmonizomeDataDownloader> downloaders = new ArrayList<>();
 		List<String> lines = Files.readAllLines(Paths.get(env.getProperty("pathToHarmonizomeFile")));
-		
+		String downloadPath = env.getProperty("pathToHarmonizomeFile");
 		for (String line : lines)
 		{
 			String[] parts = line.split("\\t");
-			HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(new URI(parts[2]), parts[0], parts[1]);
+			HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(new URI(parts[2]), parts[0], parts[1], downloadPath);
 			downloaders.add(downloader);
 		}
 		return downloaders;

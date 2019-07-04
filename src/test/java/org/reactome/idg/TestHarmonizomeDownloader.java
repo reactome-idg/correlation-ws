@@ -24,7 +24,7 @@ public class TestHarmonizomeDownloader
 	public void testDownloadHarmonizomeFileIT() throws URISyntaxException, ClientProtocolException, IOException
 	{
 		URI uri = new URI("https://amp.pharm.mssm.edu/static/hdfs/harmonizome/data/kea/gene_similarity_matrix_cosine.txt.gz");
-		HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(uri, "KEA_Substrates_of_Kinases", "");
+		HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(uri, "KEA_Substrates_of_Kinases", "", "/media/sshorser/data/reactome/IDGFiles");
 		downloader.downloadFile();
 		String[] parts = uri.getPath().split("/");
 		String fileName = parts[parts.length-1];
