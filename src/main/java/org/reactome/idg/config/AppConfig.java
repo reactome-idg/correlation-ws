@@ -13,10 +13,18 @@ import static org.hibernate.cfg.AvailableSettings.SHOW_SQL;
 import static org.hibernate.cfg.AvailableSettings.URL;
 import static org.hibernate.cfg.AvailableSettings.USER;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import javax.sql.DataSource;
 
+import org.reactome.idg.HarmonizomeDataDownloader;
 import org.reactome.idg.dao.GeneCorrelationDAOImpl;
 import org.reactome.idg.dao.ProvenanceDAOImpl;
 import org.reactome.idg.loader.Archs4Loader;
@@ -55,6 +63,21 @@ public class AppConfig {
 	public int getChunkSize()
 	{
 		return Integer.parseInt(env.getProperty("chunkSize","1000000"));
+	}
+	
+	@Bean(name="harmonizomeDownloaders")
+	public List<HarmonizomeDataDownloader> harminozomeDownloaders() throws IOException, URISyntaxException
+	{
+		List<HarmonizomeDataDownloader> downloaders = new ArrayList<>();
+		List<String> lines = Files.readAllLines(Paths.get(env.getProperty("pathToHarmonizomeFile")));
+		
+		for (String line : lines)
+		{
+			String[] parts = line.split("\\t");
+			HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(new URI(parts[2]), parts[0], parts[1]);
+			downloaders.add(downloader);
+		}
+		return downloaders;
 	}
 	
 	@Bean(name = "sessionFactory", autowireCandidate = true)
