@@ -119,6 +119,12 @@ public class Archs4ExpressionDataLoader
 		}
 	}
 	
+	/**
+	 * Gets the indices for the samples that are associated with a tissue.
+	 * @param tissueFileName
+	 * @return
+	 * @throws IOException
+	 */
 	public int[] getSampleIndicesForTissue(Path tissueFileName) throws IOException
 	{
 		List<String> sampleIds = Files.readAllLines(tissueFileName);
@@ -262,6 +268,9 @@ public class Archs4ExpressionDataLoader
 		return expressionValues;
 	}
 	
+	/**
+	 * Loads sample indicies and IDs from the HDF file into an in-memory cache.
+	 */
 	public void loadSampleIndices()
 	{
 		this.sampleIdToIndex = new HashMap<>();
@@ -276,6 +285,9 @@ public class Archs4ExpressionDataLoader
 		logger.info("Number of Sample IDs loaded: {}", this.sampleIdToIndex.size());
 	}
 
+	/**
+	 * loads gene names, and their indices, from the HDF file into an in-memory cache.
+	 */
 	public void loadGeneNames()
 	{
 		this.geneIndices = new HashMap<>();
@@ -289,11 +301,18 @@ public class Archs4ExpressionDataLoader
 		logger.info("Number of genes loaded: {}", geneIndices.size());
 	}
 	
+	/**
+	 * Returns a set of all tissue type names.
+	 * @return
+	 */
 	public Set<String> getTissueTypes()
 	{
 		return tissueTypes;
 	}
 	
+	/**
+	 * Loads tissue type names, and their indices, from the HDF file into an in-memory cache.
+	 */
 	public void loadTissueTypeNames()
 	{
 		this.tissueTypeToIndex = new HashMap<>();
@@ -317,142 +336,42 @@ public class Archs4ExpressionDataLoader
 				tissueTypeToIndex.put(tissueType, list);
 			}
 		}
-		
-//		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() <= 5) {logger.info(t);} }) ;
-//		System.out.println(
-//		tissueTypeToIndex.keySet().parallelStream().map( t -> tissueTypeToIndex.get(t).size()).max(Integer::compareTo)
-//		);
-//		tissueTypeToIndex.keySet().parallelStream().forEach(t -> {if (tissueTypeToIndex.get(t).size() == 8231) {logger.info(t);} }) ;
 
-
-		// size is the key, the *number* with that size is the value.
-//		Map<Integer,Integer> histogram = new HashMap<>();
-//		for (String tisssue : tissueTypeToIndex.keySet())
-//		{
-//			int size = tissueTypeToIndex.get(tisssue).size();
-//			if (histogram.containsKey(size))
-//			{
-//				histogram.put(size, histogram.get(size)+1 );
-//			}
-//			else
-//			{
-//				histogram.put(size, 1);
-//			}
-//		}
-//		for (Integer size : histogram.keySet().stream().sorted().collect(Collectors.toList()))
-//		{
-//			logger.info("Samples / tissue: {} ; # different tissues: {}", size, histogram.get(size));
-//		}
-		
 		logger.info("Number of distinct elements: {}", tissueTypes.size());
 	}
 	
-//	public static void getExpressionValuesForGene(String geneId)
-//	{
-//		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-//		
-//		if (file_id >= 0)
-//		{
-//			long dataset_id = H5.H5Dopen(file_id, genesDSName, HDF5Constants.H5P_DEFAULT);
-//			
-//			long type_id = H5.H5Dget_type(dataset_id);
-//			long dataWidth = H5.H5Tget_size(type_id);
-//			long space_id = H5.H5Dget_space(dataset_id);
-//			long[] dims = new long[2];
-//			long[] maxdims = new long[2];
-//			H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-//			byte[][] dset_data = new byte[numberOfSamples][(int) dataWidth];
-//			if (dataset_id >= 0)
-//			{
-//				long dcpl_id = H5.H5Dget_create_plist(dataset_id);
-//				if (dcpl_id >= 0)
-//				{
-//					if (dataset_id >= 0)
-//					{
-//						StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-//						long memtype_id = H5.H5Tcopy(HDF5Constants.H5T_C_S1);
-//						H5.H5Tset_size(memtype_id, dataWidth);
-//						H5.H5Dread(dataset_id, memtype_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-//						
-//						byte[] tempbuf = new byte[(int) dataWidth];
-//						for (int indx = 0; indx < maxdims[0]; indx++)
-//						{
-//							for (int jndx = 0; jndx < dataWidth; jndx++)
-//							{
-//								tempbuf[jndx] = dset_data[indx][jndx];
-//							}
-//							str_data[indx] = new StringBuffer(new String(tempbuf).trim());
-//						}
-//						
-//						for (int indx = 0; indx < maxdims[0]; indx++)
-//						{
-//							logger.info("{} [{}]: {}", genesDSName, indx, str_data[indx]);
-//						}
-//					}
-//				}
-//			}
-//			
-//			dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
-//			type_id = H5.H5Dget_type(dataset_id);
-//		}
-//	}
-
-//	public static Map<String, String> getTissueToSamples()
-//	{
-//		Map<String, String> tissueSampleMapping = new HashMap<>();
-//		
-//		long file_id = H5.H5Fopen(FILENAME, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-//		long dataset_id = H5.H5Dopen(file_id, "/meta/Sample_geo_accession", HDF5Constants.H5P_DEFAULT);
-//		long type_id = H5.H5Dget_type(dataset_id);
-//		long dataWidth = H5.H5Tget_size(type_id);
-//		long space_id = H5.H5Dget_space(dataset_id);
-//		long[] dims = new long[2];
-//		long[] maxdims = new long[2];
-//		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-//		byte[][] dset_data = new byte[NUM_SAMPLES][(int) dataWidth];
-//		StringBuffer[] str_data = new StringBuffer[(int) maxdims[0]];
-//		H5.H5Dread(dataset_id, type_id, HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL, HDF5Constants.H5P_DEFAULT, dset_data);
-//		byte[] tempbuf = new byte[(int) dataWidth];
-//		for (int indx = 0; indx < maxdims[0]; indx++)
-//		{
-//			for (int jndx = 0; jndx < dataWidth; jndx++)
-//			{
-//				tempbuf[jndx] = dset_data[indx][jndx];
-//			}
-//			str_data[indx] = new StringBuffer(new String(tempbuf).trim());
-//		}
-//		H5.H5Dclose(dataset_id);
-//		H5.H5Tclose(type_id);
-//		H5.H5Sclose(space_id);
-//		H5.H5Fclose(file_id);
-//		logger.info("Number of elements: ", maxdims[0]);
-//		for (int indx = 0; indx < maxdims[0]; indx++)
-//		{
-//			String sampleId = str_data[indx].toString();
-//			tissueSampleMapping.put(indexOfTissues.get(indx), sampleId);
-//		}
-//		
-//		return tissueSampleMapping;
-//	}
-
-
+	/**
+	 * Gets a mapping of tissue indices, mapped by their names.
+	 * @return
+	 */
 	public Map<Integer, String> getIndexOfTissues()
 	{
 		return indexOfTissues;
 	}
 
-
+	/**
+	 * Gets a mapping of tissue types mapped to their indices.
+	 * @return
+	 */
 	public Map<String, List<Integer>> getTissueTypeToIndex()
 	{
 		return tissueTypeToIndex;
 	}
 
 
+	/**
+	 * Gets the path to the HDF file containing the gene expression data.
+	 * @return
+	 */
 	public String getHdfExpressionFile()
 	{
 		return hdfExpressionFile;
 	}
 
+	/**
+	 * Gets a mapping of gene indices, mapped by their names.
+	 * @return
+	 */
 	public Map<String, Integer> getGeneIndices()
 	{
 		return geneIndices;
@@ -488,11 +407,19 @@ public class Archs4ExpressionDataLoader
 		this.loadSampleIndices();
 	}
 
+	/**
+	 * Gets a mapping of gene indices mapped to gene names.
+	 * @return
+	 */
 	public Map<Integer, String> getGeneIndicesToNames()
 	{
 		return geneIndicesToNames;
 	}
 
+	/**
+	 * Gets a mapping of sample indices mapped to sample IDs.
+	 * @return
+	 */
 	public Map<Integer, String> getSampleIndexToID()
 	{
 		return sampleIndexToID;
