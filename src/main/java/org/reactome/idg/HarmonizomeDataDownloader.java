@@ -12,6 +12,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class HarmonizomeDataDownloader
 {
@@ -19,6 +21,8 @@ public class HarmonizomeDataDownloader
 	private URI urlToFile;
 	private String datasetName;
 	private String dataCategory;
+	
+	private static final Logger logger = LogManager.getLogger();
 	
 	public HarmonizomeDataDownloader(URI url, String name, String category)
 	{
@@ -39,7 +43,13 @@ public class HarmonizomeDataDownloader
 					byte[] b = EntityUtils.toByteArray(response.getEntity());
 					String[] parts = this.urlToFile.getPath().split("/");
 					String fileName = parts[parts.length-1];
-					Files.write(Paths.get("/tmp/"+this.datasetName+fileName), b);
+					String outputPath = "/tmp/"+this.datasetName+fileName;
+					Files.write(Paths.get(outputPath), b);
+					logger.info("Data from {} has been downloaded to {}", this.urlToFile.toString(), outputPath);
+				}
+				else
+				{
+					logger.error("Non-200 response code ({}) was returned with message: {}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
 				}
 			}
 		}
