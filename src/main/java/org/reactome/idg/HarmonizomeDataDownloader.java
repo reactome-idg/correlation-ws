@@ -33,8 +33,14 @@ public class HarmonizomeDataDownloader
 		this.downloadPath = downloadPath;
 	}
 	
-	public void downloadFile() throws ClientProtocolException, IOException
+	public String downloadFile() throws ClientProtocolException, IOException
 	{
+		String[] parts = this.urlToFile.getPath().split("/");
+		String fileName = parts[parts.length-1];
+		String outputPath = this.downloadPath + "/" +this.datasetName+fileName;
+		// Clean up space characters in the path that could have come in from the dataset name.
+		// Be aware: there may be other characters that need to be cleaned up to.
+		outputPath = outputPath.replaceAll(" ", "_");
 		try(CloseableHttpClient client = HttpClientBuilder.create().build();)
 		{
 			HttpGet get = new HttpGet(this.urlToFile);
@@ -43,18 +49,18 @@ public class HarmonizomeDataDownloader
 				if (HttpStatus.SC_OK == response.getStatusLine().getStatusCode())
 				{
 					byte[] b = EntityUtils.toByteArray(response.getEntity());
-					String[] parts = this.urlToFile.getPath().split("/");
-					String fileName = parts[parts.length-1];
-					String outputPath = this.downloadPath + "/" +this.datasetName+fileName;
 					Files.write(Paths.get(outputPath), b);
 					logger.info("Data from {} has been downloaded to {}", this.urlToFile.toString(), outputPath);
 				}
 				else
 				{
 					logger.error("Non-200 response code ({}) was returned with message: {}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
+					// set return to null
+					outputPath = null;
 				}
 			}
 		}
+		return outputPath;
 	}
 
 	public URI getUrlToFile()

@@ -24,11 +24,12 @@ public class TestHarmonizomeDownloader
 	public void testDownloadHarmonizomeFileIT() throws URISyntaxException, ClientProtocolException, IOException
 	{
 		URI uri = new URI("https://amp.pharm.mssm.edu/static/hdfs/harmonizome/data/kea/gene_similarity_matrix_cosine.txt.gz");
-		HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(uri, "KEA_Substrates_of_Kinases", "", "/media/sshorser/data/reactome/IDGFiles");
+		String downloadPath = "/media/sshorser/data/reactome/IDGFiles";
+		HarmonizomeDataDownloader downloader = new HarmonizomeDataDownloader(uri, "KEA_Substrates_of_Kinases", "", downloadPath);
 		downloader.downloadFile();
 		String[] parts = uri.getPath().split("/");
 		String fileName = parts[parts.length-1];
-		Path path = Paths.get("/tmp/KEA_Substrates_of_Kinases"+fileName);
+		Path path = Paths.get(downloadPath+"/KEA_Substrates_of_Kinases"+fileName);
 		// make sure file exists.
 		assertTrue(Files.exists(path));
 		// make sure file has some content
@@ -50,6 +51,27 @@ public class TestHarmonizomeDownloader
 			{
 				System.out.println(downloader.getDatasetName() + "\t" + downloader.getDataCategory() + "\t" + downloader.getUrlToFile().toString());
 			}
+		}
+	}
+	
+	@Test
+	public void testBatchIT()
+	{
+		try(AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();)
+		{
+			context.register(AppConfig.class);
+			context.refresh();
+			
+			HarmonizomeBatch batch = (HarmonizomeBatch) context.getBean("harmonizomeBatch");
+			
+			assertNotNull(batch);
+			batch.downloadFiles();
+			
+			batch.loadFiles();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
 		}
 	}
 }

@@ -24,10 +24,12 @@ import java.util.Properties;
 
 import javax.sql.DataSource;
 
+import org.reactome.idg.HarmonizomeBatch;
 import org.reactome.idg.HarmonizomeDataDownloader;
 import org.reactome.idg.dao.GeneCorrelationDAOImpl;
 import org.reactome.idg.dao.ProvenanceDAOImpl;
 import org.reactome.idg.loader.Archs4Loader;
+import org.reactome.idg.loader.CorrelationMatrixLoader;
 import org.springframework.aop.target.CommonsPool2TargetSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
@@ -47,7 +49,7 @@ import com.mysql.cj.jdbc.MysqlDataSource;
 @Configuration
 @PropertySource("classpath:application.properties")
 @EnableTransactionManagement
-@ComponentScans(value = { @ComponentScan("org.reactome.idg.dao"), @ComponentScan("org.reactome.idg.loader") })
+@ComponentScans(value = { @ComponentScan("org.reactome.idg.dao"), @ComponentScan("org.reactome.idg.loader"), @ComponentScan("org.reactome.idg") })
 public class AppConfig {
 
 	@Autowired
@@ -70,7 +72,7 @@ public class AppConfig {
 	{
 		List<HarmonizomeDataDownloader> downloaders = new ArrayList<>();
 		List<String> lines = Files.readAllLines(Paths.get(env.getProperty("pathToHarmonizomeFile")));
-		String downloadPath = env.getProperty("pathToHarmonizomeFile");
+		String downloadPath = env.getProperty("harmonizomeDownloadPath");
 		for (String line : lines)
 		{
 			String[] parts = line.split("\\t");
@@ -184,4 +186,15 @@ public class AppConfig {
 		return new Archs4Loader(env.getProperty("files.archs4.correlation_file"));
 	}
 	
+	@Bean(name="correlationMatrixLoader")
+	public CorrelationMatrixLoader getCorrelationMatrixLoader()
+	{
+		return new CorrelationMatrixLoader();
+	}
+	
+	@Bean(name="harmonizomeBatch")
+	public HarmonizomeBatch getHarmonizomeBatch()
+	{
+		return new HarmonizomeBatch();
+	}
 }
