@@ -7,12 +7,11 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
@@ -99,7 +98,7 @@ public class CorrelationMatrixLoader
 				this.chunkSize = maxPairs; // to force a single-file dump & load. This could be something that is configurable flag: "single-file-data-load" or something...
 				logger.info("{} possible gene-pair correlations.",  maxPairs);
 				// global key buffer ensures that we don't add duplicate keys to the database.
-				Set<String> globalKeyBuffer = new HashSet<>(maxPairs);
+				Set<String> globalKeyBuffer = new TreeSet<>();
 				final LocalDateTime startTime = LocalDateTime.now();
 				AtomicInteger linesInFile = new AtomicInteger(0);
 				
