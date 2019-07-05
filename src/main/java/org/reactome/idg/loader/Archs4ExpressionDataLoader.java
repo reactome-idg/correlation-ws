@@ -268,6 +268,39 @@ public class Archs4ExpressionDataLoader
 		return expressionValues;
 	}
 	
+	public int[] getAllExpressionValuesForGene(String gene)
+	{
+		int expressionValues[];
+		
+		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		long space_id = H5.H5Dget_space(dataset_id);
+		int geneIndex = geneIndices.get(gene);
+		// Iterate over ALL tissues.
+		long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
+		
+		for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
+		{
+			elementCoords[i][1] = geneIndex;
+			elementCoords[i][0] = i;
+		}
+		int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
+		int dimx = this.indexOfTissues.keySet().size();
+		int dimy = 1;
+		int[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
+		expressionValues = new int[dset_data.length];
+		for (int i = 0; i < dset_data.length; i ++)
+		{
+			for (int j = 0; j < dset_data[0].length; j++)
+			{
+				int expressionValue = dset_data[i][j];
+				expressionValues[i] = expressionValue;
+			}
+		}
+		H5.H5close();
+		return expressionValues;
+	}
+	
 	/**
 	 * Loads sample indicies and IDs from the HDF file into an in-memory cache.
 	 */

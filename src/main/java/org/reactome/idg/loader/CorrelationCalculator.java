@@ -4,7 +4,7 @@ package org.reactome.idg.loader;
  * @author sshorser
  *
  */
-public abstract class CorrelationCalculator
+abstract class CorrelationCalculator
 {
 	protected String tissue;
 	protected Archs4ExpressionDataLoader dataLoader ;

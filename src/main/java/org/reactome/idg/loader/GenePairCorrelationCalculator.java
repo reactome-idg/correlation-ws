@@ -2,6 +2,8 @@ package org.reactome.idg.loader;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.stream.IntStream;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
@@ -47,6 +49,20 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	}
 	
 	/**
+	 * Creates a correlation calculator that will use ALL expression data available. The calculated value will NOT be tissue-specific.
+	 * @param gene1 - the first gene.
+	 * @param gene2 - the second gene.
+	 * @param loader - a Loader for a specific HDF file.
+	 */
+	public GenePairCorrelationCalculator(String gene1, String gene2, Archs4ExpressionDataLoader loader)
+	{
+		super(null, loader);
+		this.gene1 = gene1;
+		this.gene2 = gene2;
+		this.verifyGenes();
+	}
+	
+	/**
 	 * This will set gene1 and gene2 for this calculator and then calculate the correlation.
 	 * @param g1
 	 * @param g2
@@ -61,48 +77,70 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	}
 	
 	/**
-	 * Calculate the correlation between the genes that were passed to the constructor.
+	 * Calculate the correlation between the genes that were passed to the constructor. If tissue is not specified, correlation will be calculated across ALL samples.
 	 * @return the correlation value.
 	 * @throws IOException
 	 */
 	public double calculateGenePairCorrelation() throws IOException
 	{
 		this.verifyGenes();
-		int[][] sampleValues = new int[1][1];
-		// if the tissue has changed, we'll need to load new values into the cache.
-		if (!this.tissue.equals(currentTissue))
+		
+		if (this.tissue == null)
 		{
-			currentTissue = this.tissue;
-			sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
-			cachedExprValues = sampleValues;
+			return calculateCrossTissueCorrelation();
 		}
 		else
 		{
-			// if there is a cache then use it.
-			if (cachedExprValues != null)
+			int[][] sampleValues = new int[1][1];
+			// if the tissue has changed, we'll need to load new values into the cache.
+			if (!this.tissue.equals(currentTissue))
 			{
-				sampleValues = cachedExprValues;
-			}
-			else 
-			{
-				// this code path probably isn't possible, since the current and previous tissues are already known to match, meaning the samples have probaby already been loaded.
+				currentTissue = this.tissue;
 				sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
 				cachedExprValues = sampleValues;
 			}
+			else
+			{
+				// if there is a cache then use it.
+				if (cachedExprValues != null)
+				{
+					sampleValues = cachedExprValues;
+				}
+				else 
+				{
+					// this code path probably isn't possible, since the current and previous tissues are already known to match, meaning the samples have probaby already been loaded.
+					sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
+					cachedExprValues = sampleValues;
+				}
+			}
+			int numberOfSamples = sampleValues.length;
+			// get indices of the genes.
+			int geneIndex = this.dataLoader.getGeneIndices().get(this.gene1);
+			int otherGeneIndex = this.dataLoader.getGeneIndices().get(this.gene2);
+			// get the sample values for the two genes.
+			final double[] geneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, geneIndex, numberOfSamples);
+			final double[] otherGeneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, otherGeneIndex, numberOfSamples);
+			// calculate the Pearson's Correlation for the two sets of values, and return the correlation value.
+			PearsonsCorrelation cor = new PearsonsCorrelation();
+			double correlationValue = cor.correlation(geneSamples, otherGeneSamples);
+			return correlationValue;
 		}
-		int numberOfSamples = sampleValues.length;
-		// get indices of the genes.
-		int geneIndex = this.dataLoader.getGeneIndices().get(this.gene1);
-		int otherGeneIndex = this.dataLoader.getGeneIndices().get(this.gene2);
-		// get the sample values for the two genes.
-		final double[] geneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, geneIndex, numberOfSamples);
-		final double[] otherGeneSamples = CorrelationCalculator.getSampleValuesForGene(sampleValues, otherGeneIndex, numberOfSamples);
-		// calculate the Pearson's Correlation for the two sets of values, and return the correlation value.
-		PearsonsCorrelation cor = new PearsonsCorrelation();
-		double correlationValue = cor.correlation(geneSamples, otherGeneSamples);
-		return correlationValue;
 	}
 	
+	private double calculateCrossTissueCorrelation()
+	{
+		
+		int[] gene1ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene1);
+		int[] gene2ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene2);
+		
+		
+		PearsonsCorrelation cor = new PearsonsCorrelation();
+		double correlationValue = cor.correlation(Arrays.stream(gene1ExpressionValues).asDoubleStream().toArray(),
+												Arrays.stream(gene2ExpressionValues).asDoubleStream().toArray());
+		
+		return correlationValue;
+	}
+
 	/**
 	 * Verify that the genes are OK. If they are not known in the HDF file, then thrown an exception.
 	 * @throws IllegalArgumentException If genes are not valid.
