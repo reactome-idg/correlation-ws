@@ -103,7 +103,6 @@ public class CorrelationMatrixLoader
 				final LocalDateTime startTime = LocalDateTime.now();
 				AtomicInteger linesInFile = new AtomicInteger(0);
 				
-//				int duplicateKeyCount = 0;
 				String tempFileName = PATH_TO_TMP_FILE;
 				
 				Provenance provenanceToUse = provenanceDao.addProvenance(this.provenance);
@@ -112,8 +111,6 @@ public class CorrelationMatrixLoader
 				// We don't need to capture the lower half because this is a symmetric matrix.
 				int lineStartOffset = this.headerSize;
 				
-//				int numWorkers = 1;
-
 				// Read the rest of the header, but don't consume it. The gene symbols are always the first row, other rows may not 
 				// be populated (such as containing "NA" for all Uniprot or NCBI identifiers)
 				for (int i = 1; i < headerSize; i++)
@@ -128,17 +125,11 @@ public class CorrelationMatrixLoader
 					// if there are 3 header rows/columns, then the offset is 2 (because the arrays are 0-indexed), to skip the header and go straight to the data.
 					int headerOffset = headerSize - 1;
 					
-					String currentGeneSymbol = parts[0] ;//parts[0].substring(1, parts[0].length()-1);
+					String currentGeneSymbol = parts[0];
 
-//					int j = 1;
-					// define the range of values each worker will operate on. This was more useful when there were multiple worker threads reading the file.
 					int lineWidth = parts.length - lineStartOffset;
-//					int segmentWidth = lineWidth / numWorkers;
 					final int startIndex = headerOffset ;
 					final int endIndex = lineWidth;
-//						System.out.println("Worker #"+j + " startIndex : "+startIndex + " endIndex: "+endIndex + " Segment width: "+segmentWidth + " Line width: "+lineWidth);
-//					final List<String> subParts = Collections.synchronizedList(Arrays.asList(Arrays.copyOfRange(parts, startIndex, endIndex)));
-
 					int i = -1; // initialised to SOMEthing because it gets read outside the scope of the for-loop; in the catch-block.
 					try
 					{
@@ -147,7 +138,6 @@ public class CorrelationMatrixLoader
 						{
 							int lookupIndex = i - headerOffset;
 							String correlationValue = "";
-//							correlationValue = subParts.get(i-startIndex);
 							correlationValue = parts[i + 1];
 							String otherGeneSymbol = allGeneSymbols[lookupIndex];
 							String key = DataRepository.generateKey(currentGeneSymbol, otherGeneSymbol);
@@ -180,10 +170,6 @@ public class CorrelationMatrixLoader
 									lineBuffer.clear();
 								}
 							}
-//							else
-//							{
-//								duplicateKeyCount++;
-//							}
 						}
 					}
 					catch (ArrayIndexOutOfBoundsException e)
