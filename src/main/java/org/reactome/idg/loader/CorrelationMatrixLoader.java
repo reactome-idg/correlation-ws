@@ -6,13 +6,17 @@ import java.io.FileWriter;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -69,11 +73,15 @@ public class CorrelationMatrixLoader
 		try(FileInputStream fis = new FileInputStream(this.filePath);
 			Scanner scanner = new Scanner(fis);)
 		{
+			// Using a HashSet ensures that in each chunk, there are duplicate pairs.
+			Set<String> lineBuffer = new HashSet<>(chunkSize);
+			
 			if (scanner.hasNext())
 			{
 				String geneSymbolHeader = scanner.nextLine();
 				String[] parts = geneSymbolHeader.split(delimeter);
 				String[] allGeneSymbols = new String[parts.length-1];
+				
 				for (int i = 1; i < parts.length; i++)
 				{
 					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", "");
@@ -82,22 +90,19 @@ public class CorrelationMatrixLoader
 				logger.info("{} gene symbols in the header.", allGeneSymbols.length);
 				int maxPairs = (allGeneSymbols.length * (allGeneSymbols.length + 1))/2;
 				logger.info("{} possible gene-pair correlations.",  maxPairs);
-				
+				// global key buffer ensures that we don't add duplicate keys to the database.
+				Set<String> globalKeyBuffer = new HashSet<>(maxPairs);
 				final LocalDateTime startTime = LocalDateTime.now();
 				AtomicInteger linesInFile = new AtomicInteger(0);
 				AtomicInteger fileNum = new AtomicInteger(0);
 				String tempFileName = PATH_TO_TMP_FILE;
 				
 				Provenance provenanceToUse = provenanceDao.addProvenance(this.provenance);
-//				Provenance provenanceToUse = dao.addProvenance(archs4Provenance);
 				AtomicInteger recordCount = new AtomicInteger(0);
-				int lineStartOffset = 1;
+				int lineStartOffset = this.headerSize;
 				
-				int numWorkers = 1;
-				
-				Writer out = new FileWriter(tempFileName, false);
-				BufferedWriter writer = new BufferedWriter(out);
-				
+//				int numWorkers = 1;
+
 				// Read the rest of the header, but don't consume it. The gene symbols are always the first row, other rows may not 
 				// be populated (such as containing "NA" for all Uniprot or NCBI identifiers)
 				for (int i = 1; i < headerSize; i++)
@@ -112,9 +117,9 @@ public class CorrelationMatrixLoader
 					// if there are 3 header rows/columns, then the offset is 2 (because the arrays are 0-indexed), to skip the header and go straight to the data.
 					int headerOffset = headerSize - 1;
 					
-					String currentGeneSymbol = parts[0].substring(1, parts[0].length()-1);
+					String currentGeneSymbol = parts[0] ;//parts[0].substring(1, parts[0].length()-1);
 
-					int j = 1;
+//					int j = 1;
 					// define the range of values each worker will operate on. This was more useful when there were multiple worker threads reading the file.
 					int lineWidth = parts.length - lineStartOffset;
 //					int segmentWidth = lineWidth / numWorkers;
@@ -123,7 +128,7 @@ public class CorrelationMatrixLoader
 //						System.out.println("Worker #"+j + " startIndex : "+startIndex + " endIndex: "+endIndex + " Segment width: "+segmentWidth + " Line width: "+lineWidth);
 					final List<String> subParts = Collections.synchronizedList(Arrays.asList(Arrays.copyOfRange(parts, startIndex, endIndex)));
 
-					int i = -1;
+					int i = -1; // initialised to SOMEthing because it gets read outside the scope of the for-loop; in the catch-block.
 					try
 					{
 						// Iterate through the values in the defined range.
@@ -135,26 +140,38 @@ public class CorrelationMatrixLoader
 							String otherGeneSymbol = allGeneSymbols[lookupIndex];
 							String key = DataRepository.generateKey(currentGeneSymbol, otherGeneSymbol);
 							String keyParts[] = key.split("\\|");
-							String g1 = keyParts[0];
-							String g2 = keyParts[1];
-
-							writer.write("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
-							int count = recordCount.incrementAndGet();
-							int lineCount = linesInFile.incrementAndGet();
-							if (count % 1000000 == 0)
+							boolean newKey = globalKeyBuffer.add(key);
+							// if the key is new to this Loader, then add it to the file...
+							if (newKey)
 							{
-								logger.info("{}M gene-pairs...", count/1000000);
-								writer.flush();
-							}
-
-							if (lineCount % chunkSize == 0)
-							{
-								// Now it's time to load the file to the database.
-								writer.flush();
-								dao.loadGenePairsFromDataFile(tempFileName);
-								Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
-								out = new FileWriter(tempFileName, false);
-								writer = new BufferedWriter(out);
+								String g1 = keyParts[0];
+								String g2 = keyParts[1];
+								
+								int count = recordCount.getAndIncrement();
+								lineBuffer.add("\'"+g1+"\'\t\'"+g2+"\'\t\'"+correlationValue+"\'\t\'"+provenanceToUse.getId()+"\'\n");
+								int lineCount = linesInFile.incrementAndGet();
+								if (count % 1000000 == 0)
+								{
+									logger.info("{}M gene-pairs...", count/1000000);
+								}
+								// When the file is as big as chunkSize, load it to the database. In my experience, 1,000,000 seems to be a good number of
+								// records for a single bulk-load. Too big of a chunk sice and the number of inserts/second seems to drop a little.
+								if (lineCount % chunkSize == 0)
+								{
+									// Sort the buffer. MySQL bulk insert runs faster if the rows are pre-sorted w.r.t. key/index fields.
+									// Ideally, the *entire* data set would be sorted before we start chunking, but that might not be possible
+									// if the set is large and memory is limited. Which is why we are chunking the data in the first place. :/
+									for (String outLine : lineBuffer.stream().sorted().collect(Collectors.toList()))
+									{
+										Files.write(Paths.get(tempFileName), outLine.getBytes() , StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+									}
+									// Now it's time to load the file to the database.
+									dao.loadGenePairsFromDataFile(tempFileName);
+									// Shuffle the files - current file gets renamed via a move operation, instead of simply being over-written.
+									// This way, if something goes wrong, you have ALL of the files on disk.
+									Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
+									lineBuffer.clear();
+								}
 							}
 						}
 					}
@@ -162,24 +179,19 @@ public class CorrelationMatrixLoader
 					{
 						logger.info("ArrayOutOfBounds: startIndex: {} endIndex: {} i: {}", startIndex, endIndex, i);
 						e.printStackTrace();
-						writer.close();
 						throw e;
 					}
 					catch (Exception e)
 					{
 						e.printStackTrace();
-						writer.close();
 						throw e;
 					}
 				}
-				writer.flush();
 				lineStartOffset++;
 
-				writer.flush();
 				// load the last file, probably is smaller than CHUNK_SIZE.
 				dao.loadGenePairsFromDataFile(tempFileName);
 				Files.move(Paths.get(tempFileName), Paths.get(tempFileName + "_" + fileNum.getAndIncrement()));
-				writer.close();
 				LocalDateTime endTime = LocalDateTime.now();
 				logger.info("{} time spent loading the data.", Duration.between(startTime, endTime).toString());
 			}
