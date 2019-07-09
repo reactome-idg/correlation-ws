@@ -271,23 +271,27 @@ public class Archs4ExpressionDataLoader
 	public int[] getAllExpressionValuesForGene(String gene)
 	{
 		int expressionValues[];
-		
-		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
-		long space_id = H5.H5Dget_space(dataset_id);
-		int geneIndex = geneIndices.get(gene);
-		// Iterate over ALL tissues.
-		long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
-		
-		for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
+		int[][] dset_data;
+		synchronized(expressionValuesCache)
 		{
-			elementCoords[i][1] = geneIndex;
-			elementCoords[i][0] = i;
+			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+			long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+			long space_id = H5.H5Dget_space(dataset_id);
+			int geneIndex = geneIndices.get(gene);
+			// Iterate over ALL tissues.
+			long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
+			
+			for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
+			{
+				elementCoords[i][1] = geneIndex;
+				elementCoords[i][0] = i;
+			}
+			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
+			int dimx = this.indexOfTissues.keySet().size();
+			int dimy = 1;
+			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
+			H5.H5close();
 		}
-		int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-		int dimx = this.indexOfTissues.keySet().size();
-		int dimy = 1;
-		int[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
 		expressionValues = new int[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
@@ -297,7 +301,6 @@ public class Archs4ExpressionDataLoader
 				expressionValues[i] = expressionValue;
 			}
 		}
-		H5.H5close();
 		return expressionValues;
 	}
 	

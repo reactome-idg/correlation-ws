@@ -96,7 +96,8 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 			if (!this.tissue.equals(currentTissue))
 			{
 				currentTissue = this.tissue;
-				sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
+				sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));	
+				
 				cachedExprValues = sampleValues;
 			}
 			else
@@ -129,10 +130,10 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 	
 	private double calculateCrossTissueCorrelation()
 	{
-		
-		int[] gene1ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene1);
-		int[] gene2ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene2);
-		
+		int[] gene1ExpressionValues;
+		int[] gene2ExpressionValues;
+		gene1ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene1);
+		gene2ExpressionValues = this.dataLoader.getAllExpressionValuesForGene(this.gene2);
 		
 		PearsonsCorrelation cor = new PearsonsCorrelation();
 		double correlationValue = cor.correlation(Arrays.stream(gene1ExpressionValues).asDoubleStream().toArray(),
