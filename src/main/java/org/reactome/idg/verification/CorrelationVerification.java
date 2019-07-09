@@ -3,21 +3,18 @@ package org.reactome.idg.verification;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Scanner;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -66,7 +63,6 @@ public class CorrelationVerification
 		// Need to know how large the random numbers can be.
 		int maxNum = loader.getGeneIndices().keySet().size();
 		// get a bunch of random numbers
-//		for (int i : random.ints(numPairs, 0, maxNum).toArray())
 		random.ints(numPairs, 0, maxNum).parallel().forEach( i -> 
 		{
 			int geneIndex1 = i;
@@ -92,24 +88,23 @@ public class CorrelationVerification
 			double correlation;
 			try
 			{
-//				synchronized(calculatedCorrelations)
-				{
-					// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
-					correlation = calculator.calculateGenePairCorrelation();
-					logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
-					calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
-				}
+				// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
+				correlation = calculator.calculateGenePairCorrelation();
+				logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
+				calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
 			}
 			catch (IOException e)
 			{
 				e.printStackTrace();
 			}
 		});
+		// TODO: Add an option to read from the database (assuming it exists and is populated) instead of the file.
 		logger.info("Now getting correlations values from file.");
 		Map<String,Double> correlationsFromFile = Collections.synchronizedMap(new HashMap<>(numPairs));
 		LinkedBlockingQueue<String> lines = new LinkedBlockingQueue<>();
 		
 		ExecutorService execService = Executors.newCachedThreadPool();
+		// create a bunch of workers that will check each line to see if we need to extract a correlation from it.
 		for (int i = 0; i < ForkJoinPool.getCommonPoolParallelism(); i++)
 		{
 			Runnable lineProcessor = new Runnable()
@@ -117,44 +112,47 @@ public class CorrelationVerification
 				@Override
 				public void run()
 				{
+					// Keep trying, until the two maps have the same number of elements (that means we are done!)
 					while (correlationsFromFile.size() != calculatedCorrelations.size())
 					{
-//						if (lines.poll() != null)
+						String line;
+						try
 						{
-							String line;
-							try
+							// the take() method is blocking, so this Runnable *will* throw an InterruptedException when the executor service is shut down.
+							line = lines.take();
+							// check to see if the gene symbol at the beginning of the line is one of the genes that we calculated a correlation for.
+							String gene1 = calculatedCorrelations.keySet().parallelStream().map( geneKey -> geneKey.split("\\|")[0] ).filter( gene -> line.startsWith("\""+gene+"\"") ).findFirst().orElse(null) ;
+							if (gene1 != null)
 							{
-								// the take() method is blocking, so this Runnable *will* throw an InterruptedException when the executor service is shut down.
-								line = lines.take();
-								String gene1 = calculatedCorrelations.keySet().parallelStream().map( geneKey -> geneKey.split("\\|")[0] ).filter( gene -> line.startsWith("\""+gene+"\"") ).findFirst().orElse(null) ;
-								if (gene1 != null)
+								String geneKey = calculatedCorrelations.keySet().parallelStream().filter(gk -> gk.startsWith(gene1 + "|")).findFirst().get();
+								String[] parts = geneKey.split("\\|");
+								String gene2 = parts[1];
+								int geneIndex2 = geneNamesToIndices.get(gene2);
+								// If the current line is for gene 1, get the correlation from the line.
+								if (line.startsWith("\""+gene1+"\"") )
 								{
-									String geneKey = calculatedCorrelations.keySet().parallelStream().filter(gk -> gk.startsWith(gene1 + "|")).findFirst().get();
-									String[] parts = geneKey.split("\\|");
-									String gene2 = parts[1];
-									int geneIndex2 = geneNamesToIndices.get(gene2);
-									// If the current line is for gene 1, get the correlation from the line.
-									if (line.startsWith("\""+gene1+"\"") )
-									{
-										// now we found the line we need, get the correlation value.
-										String[] lineParts;
-										lineParts = line.split(",");
-										double correlationFromFile = Double.parseDouble(lineParts[geneIndex2]);
-										logger.info("Correlation (according to the FILE) between {} and {} is: {}", gene1, gene2, correlationFromFile);
-										correlationsFromFile.put(geneKey, correlationFromFile);
-										logger.info("Delta: {}", calculatedCorrelations.get(geneKey) - correlationsFromFile.get(geneKey) );
-										buf.append(geneKey.replace("|", ", ")).append("\t").append(correlationsFromFile.get(geneKey)).append("\t").append(calculatedCorrelations.get(geneKey)).append("\n");
-									}
+									// now we found the line we need, get the correlation value.
+									String[] lineParts;
+									lineParts = line.split(",");
+									double correlationFromFile = Double.parseDouble(lineParts[geneIndex2]);
+									logger.info("Correlation (according to the FILE) between {} and {} is: {}", gene1, gene2, correlationFromFile);
+									correlationsFromFile.put(geneKey, correlationFromFile);
+									logger.info("Delta: {}", calculatedCorrelations.get(geneKey) - correlationsFromFile.get(geneKey) );
+									// add to the string buffer. This will eventually be used to populate a report file.
+									buf.append(geneKey.replace("|", ", ")).append("\t").append(correlationsFromFile.get(geneKey)).append("\t").append(calculatedCorrelations.get(geneKey)).append("\n");
 								}
 							}
-							catch (InterruptedException e)
-							{
-								logger.info("Interrupted.");
-							}
 						}
+						catch (InterruptedException e)
+						{
+							// I expect this exception to be caught when we are done with reading from the file because reading from the queue is blocking.
+							logger.info("Interrupted.");
+						}
+
 					}
 				}
 			};
+			// submit the jobs to be ready to run.
 			execService.submit(lineProcessor);
 		}
 		// now that we have the indices, we need to read into the file.
@@ -165,35 +163,22 @@ public class CorrelationVerification
 			while (scanner.hasNext() && correlationsFromFile.size() != calculatedCorrelations.size())
 			{
 				String line = scanner.nextLine();
+				// dump lines into the queue. Jobs will pull lines out of the queue.
 				lines.add(line);
-//				String gene1 = calculatedCorrelations.keySet().parallelStream().map( geneKey -> geneKey.split("\\|")[0] ).filter( gene -> line.startsWith("\""+gene+"\"") ).findFirst().orElse(null) ;
-//				if (gene1 != null)
-//				{
-//					String geneKey = calculatedCorrelations.keySet().parallelStream().filter(gk -> gk.startsWith(gene1 + "|")).findFirst().get();
-//					String[] parts = geneKey.split("\\|");
-//					String gene2 = parts[1];
-//					int geneIndex2 = geneNamesToIndices.get(gene2);
-//					// If the current line is for gene 1, get the correlation from the line.
-//					if (line.startsWith("\""+gene1+"\"") )
-//					{
-//						// now we found the line we need, get the correlation value.
-//						String[] lineParts;
-//						lineParts = line.split(",");
-//						double correlationFromFile = Double.parseDouble(lineParts[geneIndex2]);
-//						logger.info("Correlation (according to the FILE) between {} and {} is: {}", gene1, gene2, correlationFromFile);
-//						correlationsFromFile.put(geneKey, correlationFromFile);
-//						logger.info("Delta: {}", calculatedCorrelations.get(geneKey) - correlationsFromFile.get(geneKey) );
-//						buf.append(geneKey.replace("|", ", ")).append("\t").append(correlationsFromFile.get(geneKey)).append("\t").append(calculatedCorrelations.get(geneKey)).append("\n");
-//						if (correlationsFromFile.size() == calculatedCorrelations.size())
-//						{
-//							done = true;
-//						}
-//					}
-//				}
 			}
-			execService.shutdownNow();
+
+			try
+			{
+				// let's wait up to a minute for the workers to complete. I doubt any remaining workers will need this much time...
+				logger.info("Shutting down in 60 seconds...");
+				execService.awaitTermination(60, TimeUnit.SECONDS);
+			}
+			catch (InterruptedException e)
+			{
+				logger.warn("Interrupted.");
+			}
 		}
-		
+		// Write the string buffer to a report file.
 		Files.write(Paths.get("./correlations_comparison.tsv"), buf.toString().getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
 	}
 }
