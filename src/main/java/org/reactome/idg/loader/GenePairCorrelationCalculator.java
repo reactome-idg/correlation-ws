@@ -2,6 +2,7 @@ package org.reactome.idg.loader;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
@@ -128,7 +129,7 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 		}
 	}
 	
-	private double calculateCrossTissueCorrelation()
+	public double calculateCrossTissueCorrelation()
 	{
 		int[] gene1ExpressionValues;
 		int[] gene2ExpressionValues;
@@ -142,6 +143,20 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 		return correlationValue;
 	}
 
+	public double calculateCrossTissueCorrelationFilteredByDate(LocalDateTime cutoff)
+	{
+		int[] gene1ExpressionValues;
+		int[] gene2ExpressionValues;
+		gene1ExpressionValues = this.dataLoader.getDateFilteredExpressionValuesForGene(this.gene1, cutoff);
+		gene2ExpressionValues = this.dataLoader.getDateFilteredExpressionValuesForGene(this.gene2, cutoff);
+		
+		PearsonsCorrelation cor = new PearsonsCorrelation();
+		double correlationValue = cor.correlation(Arrays.stream(gene1ExpressionValues).asDoubleStream().toArray(),
+												Arrays.stream(gene2ExpressionValues).asDoubleStream().toArray());
+		
+		return correlationValue;
+	}
+	
 	/**
 	 * Verify that the genes are OK. If they are not known in the HDF file, then thrown an exception.
 	 * @throws IllegalArgumentException If genes are not valid.

@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -58,10 +62,12 @@ public class CorrelationVerification
 				logger.info("{} gene symbols in the header.", allGeneSymbols.length);
 			}
 		}
+		LocalDateTime cutoff = LocalDate.parse("Nov 01 2017", DateTimeFormatter.ofPattern("MMM dd uuuu")).atStartOfDay();
 		
 		Random random = new Random(); // should I bother seeding this with the current time?
 		// Need to know how large the random numbers can be.
 		int maxNum = loader.getGeneIndices().keySet().size();
+		AtomicInteger numCalculated = new AtomicInteger();
 		// get a bunch of random numbers
 		random.ints(numPairs, 0, maxNum).parallel().forEach( i -> 
 		{
@@ -82,27 +88,32 @@ public class CorrelationVerification
 				otherIndex = random.nextInt(maxNum);
 				geneSymbol2 = loader.getGeneIndicesToNames().get(otherIndex);
 			}
-			logger.info("Two genes selected: {} and {}", geneSymbol1, geneSymbol2);
+//			logger.info("Two genes selected: {} and {}", geneSymbol1, geneSymbol2);
 			// Now that we have two genes, compute cross-tissue correlations.
 			GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator(geneSymbol1, geneSymbol2, loader);
 			double correlation;
-			try
+//			try
 			{
 				// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
-				correlation = calculator.calculateGenePairCorrelation();
-				logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
+				correlation = calculator.calculateCrossTissueCorrelationFilteredByDate(cutoff);
+//				logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
 				calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
+				int count = numCalculated.incrementAndGet();
+				if (count % 10 == 0)
+				{
+					logger.info("{} correlations calculated", count);
+				}
 			}
-			catch (IOException e)
-			{
-				e.printStackTrace();
-			}
+//			catch (IOException e)
+//			{
+//				e.printStackTrace();
+//			}
 		});
 		// TODO: Add an option to read from the database (assuming it exists and is populated) instead of the file.
 		logger.info("Now getting correlations values from file.");
 		Map<String,Double> correlationsFromFile = Collections.synchronizedMap(new HashMap<>(numPairs));
 		LinkedBlockingQueue<String> lines = new LinkedBlockingQueue<>();
-		
+		AtomicInteger numRead = new AtomicInteger();
 		ExecutorService execService = Executors.newCachedThreadPool();
 		// create a bunch of workers that will check each line to see if we need to extract a correlation from it.
 		for (int i = 0; i < ForkJoinPool.getCommonPoolParallelism(); i++)
@@ -137,9 +148,15 @@ public class CorrelationVerification
 									double correlationFromFile = Double.parseDouble(lineParts[geneIndex2]);
 									logger.info("Correlation (according to the FILE) between {} and {} is: {}", gene1, gene2, correlationFromFile);
 									correlationsFromFile.put(geneKey, correlationFromFile);
+									
 									logger.info("Delta: {}", calculatedCorrelations.get(geneKey) - correlationsFromFile.get(geneKey) );
 									// add to the string buffer. This will eventually be used to populate a report file.
 									buf.append(geneKey.replace("|", ", ")).append("\t").append(correlationsFromFile.get(geneKey)).append("\t").append(calculatedCorrelations.get(geneKey)).append("\n");
+									int count = numRead.incrementAndGet();
+									if (count % 100 == 0)
+									{
+										logger.info("{} correlations read from file", count);
+									}
 								}
 							}
 						}
@@ -169,9 +186,10 @@ public class CorrelationVerification
 
 			try
 			{
-				// let's wait up to a minute for the workers to complete. I doubt any remaining workers will need this much time...
-				logger.info("Shutting down in 60 seconds...");
-				execService.awaitTermination(60, TimeUnit.SECONDS);
+				// let's wait up to a minute or two for the workers to complete. I doubt any remaining workers will need this much time...
+				logger.info("Shutting down in 120 seconds...");
+				execService.awaitTermination(120, TimeUnit.SECONDS);
+				execService.shutdownNow();
 			}
 			catch (InterruptedException e)
 			{
