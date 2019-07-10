@@ -3,6 +3,9 @@ package org.reactome.idg.loader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,6 +13,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,6 +35,7 @@ public class Archs4ExpressionDataLoader
 	// keep track of the indices for sample IDs.
 	private Map<String, Integer> sampleIdToIndex = new HashMap<>();
 	private Map<Integer, String> sampleIndexToID = new HashMap<>();
+	private Map<String, LocalDateTime> sampleUpdateDates = new HashMap<>();
 
 	private int numberOfSamples ;
 	private String hdfExpressionFile;
@@ -39,6 +44,7 @@ public class Archs4ExpressionDataLoader
 	private static String genesDSName = "/meta/genes";
 	private static String tissueDSName = "/meta/Sample_source_name_ch1";
 	private static String sampleIdDSName = "/meta/Sample_geo_accession";
+	private static String sampleLastUpdatedDSName = "/meta/Sample_last_update_date";
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
 	private int numberOfGenes ;
 
@@ -268,27 +274,80 @@ public class Archs4ExpressionDataLoader
 		return expressionValues;
 	}
 	
-	public int[] getAllExpressionValuesForGene(String gene)
+	/**
+	 * Gets expression values for a gene, if their "last updated date" is BEFORE a cutoff date.
+	 * @param gene
+	 * @param cutoff
+	 * @return
+	 */
+	public int[] getDateFilteredExpressionValuesForGene(String gene, LocalDateTime cutoff)
 	{
 		int expressionValues[];
 		int[][] dset_data;
+		// Get the indices for samples that are before the cutoff.
+		List<String> sampleIDsToUse = sampleUpdateDates.keySet().parallelStream()
+													.filter(sampleID -> sampleUpdateDates.get(sampleID).compareTo(cutoff) < 0)
+													.collect(Collectors.toList());
+		int geneIndex = geneIndices.get(gene);
+		long[][] elementCoords = new long[sampleIDsToUse.size()][2];
+		// Iterate over the sample IDs that passed the date filter.
+		for (int i = 0; i < sampleIDsToUse.size(); i++)
+		{
+			int sampleIndex = this.sampleIdToIndex.get(sampleIDsToUse.get(i));
+			
+			elementCoords[i][1] = geneIndex;
+			elementCoords[i][0] = sampleIndex;
+		}
+		int dimx = sampleIDsToUse.size();
+		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
 			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 			long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
 			long space_id = H5.H5Dget_space(dataset_id);
-			int geneIndex = geneIndices.get(gene);
-			// Iterate over ALL tissues.
-			long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
 			
-			for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
-			{
-				elementCoords[i][1] = geneIndex;
-				elementCoords[i][0] = i;
-			}
 			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-			int dimx = this.indexOfTissues.keySet().size();
-			int dimy = 1;
+			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
+			H5.H5close();
+		}
+		expressionValues = new int[dset_data.length];
+		for (int i = 0; i < dset_data.length; i ++)
+		{
+			for (int j = 0; j < dset_data[0].length; j++)
+			{
+				int expressionValue = dset_data[i][j];
+				expressionValues[i] = expressionValue;
+			}
+		}
+		return expressionValues;
+	}
+	
+	/**
+	 * Gets all expression values for a gene.
+	 * @param gene - A gene-symbol.
+	 * @return an array of expression values, as integers.
+	 */
+	public int[] getAllExpressionValuesForGene(String gene)
+	{
+		int expressionValues[];
+		int[][] dset_data;
+		int geneIndex = geneIndices.get(gene);
+		// Iterate over ALL tissues.
+		long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
+		
+		for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
+		{
+			elementCoords[i][1] = geneIndex;
+			elementCoords[i][0] = i;
+		}
+		int dimx = this.indexOfTissues.keySet().size();
+		int dimy = 1;
+		synchronized(expressionValuesCache)
+		{
+			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+			long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+			long space_id = H5.H5Dget_space(dataset_id);
+			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
 			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
 			H5.H5close();
 		}
@@ -312,11 +371,18 @@ public class Archs4ExpressionDataLoader
 		this.sampleIdToIndex = new HashMap<>();
 		
 		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, this.numberOfSamples);
+		StringBuffer[] str_data_dates = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleLastUpdatedDSName, this.numberOfSamples);
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd yyyy");
+		
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
-			this.sampleIdToIndex.put(str_data[indx].toString(), indx);
-			this.sampleIndexToID.put(indx, str_data[indx].toString());
+			String sampleId = str_data[indx].toString();
+			this.sampleIdToIndex.put(sampleId, indx);
+			this.sampleIndexToID.put(indx, sampleId);
+			
+			LocalDateTime ldt = LocalDate.parse( str_data_dates[indx].toString(), formatter).atStartOfDay();
+			this.sampleUpdateDates.put(sampleId, ldt);
 		}
 		logger.info("Number of Sample IDs loaded: {}", this.sampleIdToIndex.size());
 	}
