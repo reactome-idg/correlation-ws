@@ -3,12 +3,19 @@ package org.reactome.idg.loader;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.stream.IntStream;
+import java.util.List;
 
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import jsat.DataSet;
+import jsat.SimpleDataSet;
+import jsat.classifiers.DataPoint;
+import jsat.datatransform.JLTransform;
+import jsat.linear.Vec;
 
 /**
  * Can be used to calculate the correlation between two specific genes, for a specific tissue.
@@ -143,6 +150,29 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 		return correlationValue;
 	}
 
+	private double[] applyJLTransform(int[] geneExpressionValues)
+	{
+		JLTransform transform1 = new JLTransform(1000);
+		List<DataPoint> dataPoints1 = new ArrayList<>();
+		Vec vec1 = Vec.zeros(geneExpressionValues.length);
+		for (int i = 0; i < geneExpressionValues.length; i++)
+		{
+			vec1.set(i, geneExpressionValues[i]);
+		}
+		dataPoints1.add(new DataPoint(vec1 ));
+		DataSet<?> ds1 = new SimpleDataSet(dataPoints1);
+		transform1.fit(ds1);
+		ds1.applyTransform(transform1);
+		List<DataPoint> postTransformDatapoints = ds1.getDataPoints();
+		Vec vec2 = postTransformDatapoints.get(0).getNumericalValues();
+		double[] transformedValues = new double[vec2.length()];
+		for (int i = 0; i < vec2.length(); i++)
+		{
+			transformedValues[i] = vec2.get(i);
+		}
+		return transformedValues;
+	}
+	
 	public double calculateCrossTissueCorrelationFilteredByDate(LocalDateTime cutoff)
 	{
 		int[] gene1ExpressionValues;
@@ -150,9 +180,9 @@ public class GenePairCorrelationCalculator extends CorrelationCalculator
 		gene1ExpressionValues = this.dataLoader.getDateFilteredExpressionValuesForGene(this.gene1, cutoff);
 		gene2ExpressionValues = this.dataLoader.getDateFilteredExpressionValuesForGene(this.gene2, cutoff);
 		
+		
 		PearsonsCorrelation cor = new PearsonsCorrelation();
-		double correlationValue = cor.correlation(Arrays.stream(gene1ExpressionValues).asDoubleStream().toArray(),
-												Arrays.stream(gene2ExpressionValues).asDoubleStream().toArray());
+		double correlationValue = cor.correlation(applyJLTransform(gene1ExpressionValues), applyJLTransform(gene2ExpressionValues));
 		
 		return correlationValue;
 	}
