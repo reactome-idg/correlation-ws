@@ -29,6 +29,7 @@ import org.reactome.idg.loader.GenePairCorrelationCalculator;
 
 public class CorrelationVerification
 {
+	private static final String TERMINATE_TOKEN = "SHUTDOWN";
 	private static final Logger logger = LogManager.getLogger();
 	
 	public static void main(String[] args) throws IOException
@@ -121,16 +122,17 @@ public class CorrelationVerification
 				@Override
 				public void run()
 				{
+					String line = "";
 					// Keep trying, until the two maps have the same number of elements (that means we are done!)
-					while (correlationsFromFile.size() != calculatedCorrelations.size())
+					while (correlationsFromFile.size() != calculatedCorrelations.size() && !line.equals(TERMINATE_TOKEN))
 					{
-						String line;
 						try
 						{
-							// the take() method is blocking, so this Runnable *will* throw an InterruptedException when the executor service is shut down.
+							// the take() method is blocking, so this Runnable could throw an InterruptedException when the executor service is shut down.
 							line = lines.take();
+							final String line1 = line;
 							// check to see if the gene symbol at the beginning of the line is one of the genes that we calculated a correlation for.
-							String gene1 = calculatedCorrelations.keySet().parallelStream().map( geneKey -> geneKey.split("\\|")[0] ).filter( gene -> line.startsWith("\""+gene+"\"") ).findFirst().orElse(null) ;
+							String gene1 = calculatedCorrelations.keySet().parallelStream().map( geneKey -> geneKey.split("\\|")[0] ).filter( gene -> line1.startsWith("\""+gene+"\"") ).findFirst().orElse(null) ;
 							if (gene1 != null)
 							{
 								String geneKey = calculatedCorrelations.keySet().parallelStream().filter(gk -> gk.startsWith(gene1 + "|")).findFirst().get();
@@ -161,9 +163,11 @@ public class CorrelationVerification
 						catch (InterruptedException e)
 						{
 							// I expect this exception to be caught when we are done with reading from the file because reading from the queue is blocking.
-							logger.info("Interrupted.");
+							logger.info("Interrupted!");
 						}
 					}
+					// put the token back into the queue so the next worker can consume it.
+					lines.add(TERMINATE_TOKEN);
 				}
 			};
 			// submit the jobs to be ready to run.
@@ -180,13 +184,14 @@ public class CorrelationVerification
 				// dump lines into the queue. Jobs will pull lines out of the queue.
 				lines.add(line);
 			}
-
+			// The last item in the queue is a token to indicate to the workers that they should shutdown.
+			lines.add(TERMINATE_TOKEN);
 			try
 			{
 				// let's wait up to a minute or two for the workers to complete. I doubt any remaining workers will need this much time...
 				logger.info("Shutting down in 120 seconds...");
 				execService.awaitTermination(120, TimeUnit.SECONDS);
-				execService.shutdownNow();
+//				execService.shutdownNow();
 			}
 			catch (InterruptedException e)
 			{
