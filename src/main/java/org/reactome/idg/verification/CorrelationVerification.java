@@ -44,6 +44,7 @@ public class CorrelationVerification
 		logger.info("Number of correlations to calculate: {}", numPairs);
 		String pathToCorrelationFile = args[2];
 		Map<String, Integer> geneNamesToIndices = new HashMap<>();
+		Map<Integer, String> geneIndicesToNames = new HashMap<>();
 		// read the file. Start by reading the header to get the indices.
 		try(FileInputStream fis = new FileInputStream(pathToCorrelationFile);
 				Scanner scanner = new Scanner(fis);)
@@ -57,6 +58,7 @@ public class CorrelationVerification
 				{
 					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", "");
 					geneNamesToIndices.put(allGeneSymbols[i - 1], i);
+					geneIndicesToNames.put(i, allGeneSymbols[i - 1]);
 				}
 
 				logger.info("{} gene symbols in the header.", allGeneSymbols.length);
@@ -66,17 +68,19 @@ public class CorrelationVerification
 		
 		Random random = new Random(); // should I bother seeding this with the current time?
 		// Need to know how large the random numbers can be.
-		int maxNum = loader.getGeneIndices().keySet().size();
+		int maxNum = geneNamesToIndices.keySet().size();
 		AtomicInteger numCalculated = new AtomicInteger();
 		// get a bunch of random numbers
 		random.ints(numPairs, 0, maxNum).parallel().forEach( i -> 
 		{
 			int geneIndex1 = i;
-			String geneSymbol1 = loader.getGeneIndicesToNames().get(geneIndex1);
+			String geneSymbol1 = geneIndicesToNames.get(geneIndex1);
+			// if the randomly selected index does not map to a symbol in the Correlations file,
+			// loop to select a new index until the corresponding symbol IS in the Correlations file.
 			while (!geneNamesToIndices.containsKey(geneSymbol1))
 			{
 				geneIndex1 = random.nextInt(maxNum);
-				geneSymbol1 = loader.getGeneIndicesToNames().get(geneIndex1);
+				geneSymbol1 = geneIndicesToNames.get(geneIndex1);
 			}
 			String geneSymbol2 = "";
 			int otherIndex = random.nextInt(maxNum);
@@ -165,7 +169,6 @@ public class CorrelationVerification
 							// I expect this exception to be caught when we are done with reading from the file because reading from the queue is blocking.
 							logger.info("Interrupted.");
 						}
-
 					}
 				}
 			};
