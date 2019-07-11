@@ -57,6 +57,7 @@ public class CorrelationVerification
 				for (int i = 1; i < parts.length; i++)
 				{
 					allGeneSymbols[i - 1] = parts[i].replaceAll("\"", "");
+					// populate symbol-to-index index-to-symbol maps.
 					geneNamesToIndices.put(allGeneSymbols[i - 1], i);
 					geneIndicesToNames.put(i, allGeneSymbols[i - 1]);
 				}
@@ -87,7 +88,7 @@ public class CorrelationVerification
 			// Make sure we don't select the same two genes, or the correlation will just be 1.0, and that's not very interesting.
 			// Actually, maybe it should be allowed. If two random genes ARE the same, then the output should be 1.0 - if it's NOT 
 			// then that would indicate something else has gone wrong.
-			while (geneSymbol2 == geneSymbol1 || !geneNamesToIndices.containsKey(geneSymbol2))
+			while (!geneNamesToIndices.containsKey(geneSymbol2))
 			{
 				otherIndex = random.nextInt(maxNum);
 				geneSymbol2 = loader.getGeneIndicesToNames().get(otherIndex);
@@ -96,22 +97,15 @@ public class CorrelationVerification
 			// Now that we have two genes, compute cross-tissue correlations.
 			GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator(geneSymbol1, geneSymbol2, loader);
 			double correlation;
-//			try
-			{
-				// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
-				correlation = calculator.calculateCrossTissueCorrelationFilteredByDate(cutoff);
+			// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
+			correlation = calculator.calculateCrossTissueCorrelationFilteredByDate(cutoff);
 //				logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
-				calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
-				int count = numCalculated.incrementAndGet();
-				if (count % 10 == 0)
-				{
-					logger.info("{} correlations calculated", count);
-				}
+			calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
+			int count = numCalculated.incrementAndGet();
+			if (count % 10 == 0)
+			{
+				logger.info("{} correlations calculated", count);
 			}
-//			catch (IOException e)
-//			{
-//				e.printStackTrace();
-//			}
 		});
 		// TODO: Add an option to read from the database (assuming it exists and is populated) instead of the file.
 		logger.info("Now getting correlations values from file.");
