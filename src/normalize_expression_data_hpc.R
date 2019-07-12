@@ -49,30 +49,16 @@ load(source_file)
 print("Loading is complete!")
 class(meta)
 class(expression)
-# read in the list of sample IDs
-#samples <- h5read(source_file, "meta/Sample_geo_accession")
+
 samples <- meta["Sample_geo_accession"]
 class(samples)
 genes <- meta["genes"]
 class(genes)
-# read in the list of gene symbols
-#genes <- h5read(source_file, "meta/genes")
 
 # Need to loop through samples, normalizing them, and then write a new HDF file.
 length(genes)
-#for (i in 1:1)
-#{
-	
-#	print(samples[i])
-#	sample_location <- which(samples %in% sample(samples, 100, replace=TRUE))
-	#sample_location <- which(samples %in% c(samples[i], samples[i+1]))
-	#sample_location <- which(samples %in% samples[i])
-#	index4h5 <- list(1:length(genes), sample_location)
-#	expression <- h5read(file=source_file, name="data/expression", index=index4h5)
-#	expression <- log2(expression+1)
-	normalized <- normalize.quantiles(expression[,1:3])
 
-#}
+normalized <- normalize.quantiles(expression[,1:3])
 # cleanup before attempting to create new file.
 if(file.exists(output_file))
 {
