@@ -186,17 +186,17 @@ public class CorrelationVerification
 			}
 			// The last item in the queue is a token to indicate to the workers that they should shutdown.
 			lines.add(TERMINATE_TOKEN);
-			try
-			{
-				// let's wait up to a minute or two for the workers to complete. I doubt any remaining workers will need this much time...
-				logger.info("Shutting down in 120 seconds...");
-				execService.awaitTermination(120, TimeUnit.SECONDS);
-//				execService.shutdownNow();
-			}
-			catch (InterruptedException e)
-			{
-				logger.warn("Interrupted.");
-			}
+//			try
+//			{
+//				// let's wait up to a minute or two for the workers to complete. I doubt any remaining workers will need this much time...
+//				logger.info("Shutting down in 120 seconds...");
+//				execService.awaitTermination(120, TimeUnit.SECONDS);
+				execService.shutdownNow();
+//			}
+//			catch (InterruptedException e)
+//			{
+//				logger.warn("Interrupted.");
+//			}
 		}
 		// Write the string buffer to a report file.
 		Files.write(Paths.get("./correlations_comparison.tsv"), buf.toString().getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE);
