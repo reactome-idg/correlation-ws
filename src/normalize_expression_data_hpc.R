@@ -7,10 +7,10 @@
 packages <- c("rhdf5", "preprocessCore")
 if (length(setdiff(packages, rownames(installed.packages()))) > 0)
 {
-	print("Install required packages")
-	source("https://bioconductor.org/biocLite.R")
-	biocLite("rhdf5")
-	biocLite("preprocessCore")
+  print("Install required packages")
+  source("https://bioconductor.org/biocLite.R")
+  biocLite("rhdf5")
+  biocLite("preprocessCore")
 }
 
 library("rhdf5")
@@ -58,16 +58,16 @@ class(genes)
 # Need to loop through samples, normalizing them, and then write a new HDF file.
 length(genes)
 
-normalized <- normalize.quantiles(expression[,1:3])
+normalized <- normalize.quantiles(expression[,1:50000],copy=FALSE)
 # cleanup before attempting to create new file.
 if(file.exists(output_file))
 {
   print("Removing pre-existing output file.")
   file.remove(output_file)
 }
-
+print(paste("Writing to ",output_file))
 h5createFile(output_file)
 h5createGroup(output_file,"data")
-h5createDataset(output_file, "data/normalized_expression", dim(normalized), storage.mode=storage.mode(normalized))
+h5createDataset(output_file, "data/normalized_expression", dim(normalized), storage.mode = storage.mode(normalized), fillValue = 0.0, chunk = c(500, 500), level = 7)
 h5write(normalized, file=output_file, "data/normalized_expression")
 h5closeAll()
