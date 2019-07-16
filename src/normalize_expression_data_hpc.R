@@ -8,7 +8,12 @@ packages <- c("rhdf5", "preprocessCore")
 if (length(setdiff(packages, rownames(installed.packages()))) > 0)
 {
   print("Install required packages")
-  source("https://bioconductor.org/biocLite.R")
+  #source("https://bioconductor.org/biocLite.R")
+  
+  if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+  BiocManager::install()
+  
   biocLite("rhdf5")
   biocLite("preprocessCore")
 }
