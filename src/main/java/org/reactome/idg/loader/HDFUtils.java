@@ -18,17 +18,39 @@ public class HDFUtils
 	 */
 	public static double[][] readData(long dataset_id, long space_id, int dimx, int dimy)
 	{
+		// TODO: Maybe make an overload of this function where one array dimension is always 1 so that we can return a 1-dimensional array?
 		double[][] dset_data = new double[dimx][dimy];
-		
-		long[] dims = new long[2];
+		int rank = 2;
+		long[] dims = new long[rank];
 		dims[0] = dimx;
 		dims[1] = dimy;
-		long memspace_id = H5.H5Screate_simple(2, dims, null);
+		long memspace_id = H5.H5Screate_simple(rank, dims, null);
 		long type_id = H5.H5Dget_type(dataset_id);
 		H5.H5Dread(dataset_id, type_id, memspace_id, space_id, HDF5Constants.H5P_DEFAULT, dset_data);
 		H5.H5Sclose(memspace_id);
 		H5.H5Tclose(type_id);
-
+		return dset_data;
+	}
+	
+	/**
+	 * Reads data from a dataset.
+	 * @param dataset_id - The dataset ID.
+	 * @param space_id - The ID of the dataset's dataspace.
+	 * @param dimx - The size of the x-dimension of the portion to read.
+	 * @return An array that has length of <code>dimx</code>. 
+	 */
+	public static double[] readData(long dataset_id, long space_id, int dimx)
+	{
+		double[] dset_data = new double[dimx];
+		int rank = 2;
+		long[] dims = new long[rank];
+		dims[0] = dimx;
+		dims[1] = 1;
+		long memspace_id = H5.H5Screate_simple(rank, dims, null);
+		long type_id = H5.H5Dget_type(dataset_id);
+		H5.H5Dread(dataset_id, type_id, memspace_id, space_id, HDF5Constants.H5P_DEFAULT, dset_data);
+		H5.H5Sclose(memspace_id);
+		H5.H5Tclose(type_id);
 		return dset_data;
 	}
 	

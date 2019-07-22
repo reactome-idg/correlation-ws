@@ -27,20 +27,6 @@ public class Archs4ExpressionDataLoader
 	private static final Logger logger = LogManager.getLogger();
 	Archs4ExpressionMetadata metadata = new Archs4ExpressionMetadata();
 	
-//	// Need a list of all Tissue-type names.
-//	private Set<String> tissueTypes = new HashSet<>();
-//	// A mapping of gene name to row-index in expression dataset.
-//	private Map<String, Integer> geneIndices = new HashMap<>();
-//	private Map<Integer, String> geneIndicesToNames = new HashMap<>();
-//	// A mapping of indices and the tissue type associated with it.
-//	private Map<Integer, String> indexOfTissues = new HashMap<>();
-//	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
-//	// keep track of the indices for sample IDs.
-//	private Map<String, Integer> sampleIdToIndex = new HashMap<>();
-//	private Map<Integer, String> sampleIndexToID = new HashMap<>();
-//	private Map<String, LocalDateTime> sampleUpdateDates = new HashMap<>();
-//	
-//	private int numberOfSamples ;
 	private String hdfExpressionFile;
 	// Some data-set names we will be using.
 	private static String expressionDSName = "/data/expression";
@@ -50,12 +36,19 @@ public class Archs4ExpressionDataLoader
 	private static String sampleIdDSName = "/meta/Sample_geo_accession";
 	private static String sampleLastUpdatedDSName = "/meta/Sample_last_update_date";
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
-//	private int numberOfGenes ;
 
 	private static Map<String,Object> expressionValuesCache = new HashMap<>();
 	
+	/**
+	 * Contains metadata for an HDF file with ARCHS4 data.
+	 * Use for the original file from ARCHS4, as well as the HDF 
+	 * containing normalized expression values.
+	 * @author sshorser
+	 *
+	 */
 	class Archs4ExpressionMetadata
 	{
+		// Need a list of all Tissue-type names.
 		private Set<String> tissueTypes = new HashSet<>();
 		// A mapping of gene name to row-index in expression dataset.
 		private Map<String, Integer> geneIndices = new HashMap<>();
@@ -150,7 +143,15 @@ public class Archs4ExpressionDataLoader
 			this.numberOfGenes = numberOfGenes;
 		}
 	}
-	
+	/**
+	 * Used to determine what we are looking at when
+	 * querying objects in an HDF file.
+	 * When you call H5.H5Gget_obj_info_all on a named
+	 * object in the file, the type will have a numeric value
+	 * that should be in this enum.
+	 * @author sshorser
+	 *
+	 */
 	enum H5O_type
 	{
 		H5O_TYPE_UNKNOWN(-1), // Unknown object type
@@ -306,8 +307,6 @@ public class Archs4ExpressionDataLoader
 	 */
 	public synchronized double[][] getExpressionValuesBySampleIndices(List<Integer> indices, String datasubsetName)
 	{
-//		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
-//		logger.info("Tissue indices: {}", indices.toString());
 		double[][] expressionValues = new double[this.metadata.getNumberOfGenes()][indices.size()];
 		
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
@@ -387,6 +386,13 @@ public class Archs4ExpressionDataLoader
 		return expressionValues;
 	}
 
+	/**
+	 * Gets the name of dataset containing expression data, for some file_id.
+	 * If you are passing in a file_id for the original HDF file, the dataset name should be "expression".
+	 * If you are passing in a file_id for the HDF file containing normalized data, the dataset name should be "normalized_expression".
+	 * @param file_id
+	 * @return the name of the dataset containing expression data.
+	 */
 	private static String determineExpressionDSName(long file_id)
 	{
 		int memberCount = (int) H5.H5Gn_members(file_id, "/");
@@ -397,11 +403,9 @@ public class Archs4ExpressionDataLoader
 		H5.H5Gget_obj_info_all(file_id, "/data", oname, otype, ltype, orefs, HDF5Constants.H5_INDEX_NAME);
 		for (int indx = 0; indx < otype.length; indx++)
 		{
-//			logger.info("{}", oname[indx]);
 			switch (H5O_type.get(otype[indx]))
 			{
 				case H5O_TYPE_DATASET:
-//					System.out.println("  Dataset: " + oname[indx]);
 					if ("expression".equals(oname[indx]))
 					{
 						return expressionDSName;
@@ -446,16 +450,9 @@ public class Archs4ExpressionDataLoader
 		int dimy = 1;
 		
 		double[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
-		double[] expressionValues = new double[dset_data.length];
-		for (int i = 0; i < dset_data.length; i ++)
-		{
-			for (int j = 0; j < dset_data[0].length; j++)
-			{
-				double expressionValue = dset_data[i][j];
-				expressionValues[i] = expressionValue;
-			}
-		}
 		H5.H5close();
+
+		double[] expressionValues = extractExpressionValuesFromDataset(dset_data);
 		return expressionValues;
 	}
 	
@@ -487,20 +484,51 @@ public class Archs4ExpressionDataLoader
 		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
-			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-			String dsName = determineExpressionDSName(file_id);
-			long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
-			long space_id = H5.H5Dget_space(dataset_id);
-			
-			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
-			H5.H5close();
+			dset_data = readExpressionValues(elementCoords, dimx, dimy);
 		}
+		expressionValues = extractExpressionValuesFromDataset(dset_data);
+		return expressionValues;
+	}
+
+	/**
+	 * Reads expression data from an HDF file.
+	 * @param elementCoords Coordinates of the points to read.
+	 * @param dimx
+	 * @param dimy
+	 * @return
+	 */
+	private double[][] readExpressionValues(long[][] elementCoords, int dimx, int dimy)
+	{
+		double[][] dset_data;
+		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
+		String dsName = determineExpressionDSName(file_id);
+		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
+		long space_id = H5.H5Dget_space(dataset_id);
+		
+		H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
+		dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
+		H5.H5close();
+		return dset_data;
+	}
+
+	/**
+	 * Extracts expression valus from a dset_data (a result from H5DRead)
+	 * @param dset_data
+	 * @return
+	 */
+	private static double[] extractExpressionValuesFromDataset(double[][] dset_data)
+	{
+		double[] expressionValues;
 		expressionValues = new double[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
 			for (int j = 0; j < dset_data[0].length; j++)
 			{
+				// the input array is a 2-dimensional array because HDFUtils.readData always 
+				// returns double[][], though I expect that for expression
+				// data, the second dimension will always have a length of 1.
+				// If there is MORE than one element for this inner loop to process, then 
+				// something rather strange might be happening...
 				double expressionValue = dset_data[i][j];
 				expressionValues[i] = expressionValue;
 			}
@@ -520,7 +548,6 @@ public class Archs4ExpressionDataLoader
 		int geneIndex = this.metadata.getGeneIndices().get(gene);
 		// Iterate over ALL tissues.
 		long[][] elementCoords = new long[this.metadata.getIndexOfTissues().keySet().size()][2];
-		
 		for (int i = 0; i < this.metadata.getIndexOfTissues().keySet().size(); i++)
 		{
 			elementCoords[i][1] = geneIndex;
@@ -530,23 +557,10 @@ public class Archs4ExpressionDataLoader
 		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
-			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-			String dsName = determineExpressionDSName(file_id);
-			long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
-			long space_id = H5.H5Dget_space(dataset_id);
-			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
-			H5.H5close();
+			dset_data = readExpressionValues(elementCoords, dimx, dimy);
+			
 		}
-		expressionValues = new double[dset_data.length];
-		for (int i = 0; i < dset_data.length; i ++)
-		{
-			for (int j = 0; j < dset_data[0].length; j++)
-			{
-				double expressionValue = dset_data[i][j];
-				expressionValues[i] = expressionValue;
-			}
-		}
+		expressionValues = extractExpressionValuesFromDataset(dset_data);
 		return expressionValues;
 	}
 	
