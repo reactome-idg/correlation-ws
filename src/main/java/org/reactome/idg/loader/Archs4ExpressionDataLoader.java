@@ -315,9 +315,6 @@ public class Archs4ExpressionDataLoader
 		long dataset_id = H5.H5Dopen(file_id, datasetName, HDF5Constants.H5P_DEFAULT);
 		long dset_space_id = H5.H5Dget_space(dataset_id);
 		
-		boolean isFirst = true;
-		int op = HDF5Constants.H5S_SELECT_SET;
-		
 		List<List<Integer>> contigBlocks = new ArrayList<>();
 		int maxBlockWidth = 0;
 		int blockCount = 0;
@@ -355,6 +352,30 @@ public class Archs4ExpressionDataLoader
 		logger.info("{} contiguous blocks; max block width: {}", blockCount, maxBlockWidth);
 		
 		// Append tissue-sample columns to the hyperslab...
+		createSelectionInDSFromBlocks(dset_space_id, contigBlocks);
+		
+		// Now... read the selections into a dataset.
+		// DimX is how many total indices there were for a tissue.
+		int dimx = indices.size();
+		// DimY is how many genes there were (assume all, for all tissues).
+		int dimy = this.metadata.getNumberOfGenes();
+
+		// Now that the selections have all been made, it is FINALLY time to read the data.
+		expressionValues = HDFUtils.readData(dataset_id, dset_space_id, dimx, dimy);
+		H5.H5close();
+		return expressionValues;
+	}
+
+	/**
+	 * Sets a selection in dataset based on a list of contiguous blocks.
+	 * @param dset_space_id - ID of the dataset to create the selection in.
+	 * @param contigBlocks - list of block. Each element in <code>contigBlocks</code> is another List
+	 * whose elements define the starting point of a selection block, and the number of elements in that block.
+	 */
+	private void createSelectionInDSFromBlocks(long dset_space_id, List<List<Integer>> contigBlocks)
+	{
+		boolean isFirst = true;
+		int op = HDF5Constants.H5S_SELECT_SET;
 		for (List<Integer> contigBlock : contigBlocks)
 		{
 			// Select a column (for a tissue sample) from the first gene to the last.
@@ -373,17 +394,6 @@ public class Archs4ExpressionDataLoader
 				op = HDF5Constants.H5S_SELECT_OR;
 			}
 		}
-		
-		// Now... read the selections into a dataset.
-		// DimX is how many total indices there were for a tissue.
-		int dimx = indices.size();
-		// DimY is how many genes there were (assume all, for all tissues).
-		int dimy = this.metadata.getNumberOfGenes();
-
-		// Now that the selections have all been made, it is FINALLY time to read the data.
-		expressionValues = HDFUtils.readData(dataset_id, dset_space_id, dimx, dimy);
-		H5.H5close();
-		return expressionValues;
 	}
 
 	/**
@@ -447,8 +457,6 @@ public class Archs4ExpressionDataLoader
 		}
 
 		int dimx = indicesForTissue.size();
-//		int dimy = 1;
-		
 		double[] dset_data = HDFUtils.readData(dataset_id, space_id, dimx);
 		H5.H5close();
 
@@ -481,7 +489,6 @@ public class Archs4ExpressionDataLoader
 			elementCoords[i][0] = sampleIndex;
 		}
 		int dimx = sampleIDsToUse.size();
-//		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
 			dset_data = readExpressionValues(elementCoords, dimx);
@@ -493,29 +500,8 @@ public class Archs4ExpressionDataLoader
 	/**
 	 * Reads expression data from an HDF file.
 	 * @param elementCoords Coordinates of the points to read.
-	 * @param dimx
-	 * @param dimy
-	 * @return
-	 */
-//	private double[][] readExpressionValues(long[][] elementCoords, int dimx, int dimy)
-//	{
-//		double[][] dset_data;
-//		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-//		String dsName = determineExpressionDSName(file_id);
-//		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
-//		long space_id = H5.H5Dget_space(dataset_id);
-//		
-//		H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
-//		dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
-//		H5.H5close();
-//		return dset_data;
-//	}
-
-	/**
-	 * Reads expression data from an HDF file.
-	 * @param elementCoords Coordinates of the points to read.
-	 * @param dimx
-	 * @return
+	 * @param dimx - the size of the array that will be returned. Usually, this is elementCoords.length.
+	 * @return an array of expression values.
 	 */
 	private double[] readExpressionValues(long[][] elementCoords, int dimx)
 	{
@@ -532,7 +518,7 @@ public class Archs4ExpressionDataLoader
 	}
 	
 	/**
-	 * Extracts expression values from a dset_data (a result from H5DRead)
+	 * Extracts expression values from a dset_data (a result from H5DRead). 
 	 * @param dset_data
 	 * @return
 	 */
@@ -542,16 +528,7 @@ public class Archs4ExpressionDataLoader
 		expressionValues = new double[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
-//			for (int j = 0; j < dset_data[0].length; j++)
-//			{
-				// the input array is a 2-dimensional array because HDFUtils.readData always 
-				// returns double[][], though I expect that for expression
-				// data, the second dimension will always have a length of 1.
-				// If there is MORE than one element for this inner loop to process, then 
-				// something rather strange might be happening...
-				double expressionValue = dset_data[i];
-				expressionValues[i] = expressionValue;
-//			}
+			expressionValues[i] = dset_data[i];
 		}
 		return expressionValues;
 	}
@@ -574,7 +551,6 @@ public class Archs4ExpressionDataLoader
 			elementCoords[i][0] = i;
 		}
 		int dimx = this.metadata.getIndexOfTissues().keySet().size();
-//		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
 			dset_data = readExpressionValues(elementCoords, dimx);
