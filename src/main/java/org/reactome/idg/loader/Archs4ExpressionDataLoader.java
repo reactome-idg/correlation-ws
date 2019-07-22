@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -24,37 +25,189 @@ import hdf.hdf5lib.HDF5Constants;
 public class Archs4ExpressionDataLoader
 {
 	private static final Logger logger = LogManager.getLogger();
-	// Need a list of all Tissue-type names.
-	private Set<String> tissueTypes = new HashSet<>();
-	// A mapping of gene name to row-index in expression dataset.
-	private Map<String, Integer> geneIndices = new HashMap<>();
-	private Map<Integer, String> geneIndicesToNames = new HashMap<>();
-	// A mapping of indices and the tissue type associated with it.
-	private Map<Integer, String> indexOfTissues = new HashMap<>();
-	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
-	// keep track of the indices for sample IDs.
-	private Map<String, Integer> sampleIdToIndex = new HashMap<>();
-	private Map<Integer, String> sampleIndexToID = new HashMap<>();
-	private Map<String, LocalDateTime> sampleUpdateDates = new HashMap<>();
-
-	private int numberOfSamples ;
+	Archs4ExpressionMetadata metadata = new Archs4ExpressionMetadata();
+	
+//	// Need a list of all Tissue-type names.
+//	private Set<String> tissueTypes = new HashSet<>();
+//	// A mapping of gene name to row-index in expression dataset.
+//	private Map<String, Integer> geneIndices = new HashMap<>();
+//	private Map<Integer, String> geneIndicesToNames = new HashMap<>();
+//	// A mapping of indices and the tissue type associated with it.
+//	private Map<Integer, String> indexOfTissues = new HashMap<>();
+//	private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
+//	// keep track of the indices for sample IDs.
+//	private Map<String, Integer> sampleIdToIndex = new HashMap<>();
+//	private Map<Integer, String> sampleIndexToID = new HashMap<>();
+//	private Map<String, LocalDateTime> sampleUpdateDates = new HashMap<>();
+//	
+//	private int numberOfSamples ;
 	private String hdfExpressionFile;
 	// Some data-set names we will be using.
 	private static String expressionDSName = "/data/expression";
+	private static String normExpressionDSName = "/data/normalized_expression";
 	private static String genesDSName = "/meta/genes";
 	private static String tissueDSName = "/meta/Sample_source_name_ch1";
 	private static String sampleIdDSName = "/meta/Sample_geo_accession";
 	private static String sampleLastUpdatedDSName = "/meta/Sample_last_update_date";
 	// Eventually, we will need to *filter* the genes from the Expression file: genes not in the Correlation file will need to be excluded.
-	private int numberOfGenes ;
+//	private int numberOfGenes ;
 
 	private static Map<String,Object> expressionValuesCache = new HashMap<>();
+	
+	class Archs4ExpressionMetadata
+	{
+		private Set<String> tissueTypes = new HashSet<>();
+		// A mapping of gene name to row-index in expression dataset.
+		private Map<String, Integer> geneIndices = new HashMap<>();
+		private Map<Integer, String> geneIndicesToNames = new HashMap<>();
+		// A mapping of indices and the tissue type associated with it.
+		private Map<Integer, String> indexOfTissues = new HashMap<>();
+		private Map<String, List<Integer>> tissueTypeToIndex = new HashMap<>();
+		// keep track of the indices for sample IDs.
+		private Map<String, Integer> sampleIdToIndex = new HashMap<>();
+		private Map<Integer, String> sampleIndexToID = new HashMap<>();
+		private Map<String, LocalDateTime> sampleUpdateDates = new HashMap<>();
+		private int numberOfSamples ;
+		private int numberOfGenes ;
+		public Set<String> getTissueTypes()
+		{
+			return tissueTypes;
+		}
+		public void setTissueTypes(Set<String> tissueTypes)
+		{
+			this.tissueTypes = tissueTypes;
+		}
+		public Map<String, Integer> getGeneIndices()
+		{
+			return geneIndices;
+		}
+		public void setGeneIndices(Map<String, Integer> geneIndices)
+		{
+			this.geneIndices = geneIndices;
+		}
+		public Map<Integer, String> getGeneIndicesToNames()
+		{
+			return geneIndicesToNames;
+		}
+		public void setGeneIndicesToNames(Map<Integer, String> geneIndicesToNames)
+		{
+			this.geneIndicesToNames = geneIndicesToNames;
+		}
+		public Map<Integer, String> getIndexOfTissues()
+		{
+			return indexOfTissues;
+		}
+		public void setIndexOfTissues(Map<Integer, String> indexOfTissues)
+		{
+			this.indexOfTissues = indexOfTissues;
+		}
+		public Map<String, List<Integer>> getTissueTypeToIndex()
+		{
+			return tissueTypeToIndex;
+		}
+		public void setTissueTypeToIndex(Map<String, List<Integer>> tissueTypeToIndex)
+		{
+			this.tissueTypeToIndex = tissueTypeToIndex;
+		}
+		public Map<String, Integer> getSampleIdToIndex()
+		{
+			return sampleIdToIndex;
+		}
+		public void setSampleIdToIndex(Map<String, Integer> sampleIdToIndex)
+		{
+			this.sampleIdToIndex = sampleIdToIndex;
+		}
+		public Map<Integer, String> getSampleIndexToID()
+		{
+			return sampleIndexToID;
+		}
+		public void setSampleIndexToID(Map<Integer, String> sampleIndexToID)
+		{
+			this.sampleIndexToID = sampleIndexToID;
+		}
+		public Map<String, LocalDateTime> getSampleUpdateDates()
+		{
+			return sampleUpdateDates;
+		}
+		public void setSampleUpdateDates(Map<String, LocalDateTime> sampleUpdateDates)
+		{
+			this.sampleUpdateDates = sampleUpdateDates;
+		}
+		public int getNumberOfSamples()
+		{
+			return numberOfSamples;
+		}
+		public void setNumberOfSamples(int numberOfSamples)
+		{
+			this.numberOfSamples = numberOfSamples;
+		}
+		public int getNumberOfGenes()
+		{
+			return numberOfGenes;
+		}
+		public void setNumberOfGenes(int numberOfGenes)
+		{
+			this.numberOfGenes = numberOfGenes;
+		}
+	}
+	
+	enum H5O_type
+	{
+		H5O_TYPE_UNKNOWN(-1), // Unknown object type
+		H5O_TYPE_GROUP(0), // Object is a group
+		H5O_TYPE_DATASET(1), // Object is a dataset
+		H5O_TYPE_NAMED_DATATYPE(2), // Object is a named data type
+		H5O_TYPE_NTYPES(3); // Number of different object types
+		private static final Map<Integer, H5O_type> lookup = new HashMap<>();
+
+		static
+		{
+			for (H5O_type s : EnumSet.allOf(H5O_type.class))
+			{
+				lookup.put(s.getCode(), s);
+			}
+		}
+
+		private int code;
+
+		H5O_type(int layout_type)
+		{
+			this.code = layout_type;
+		}
+
+		public int getCode()
+		{
+			return this.code;
+		}
+
+		public static H5O_type get(int code)
+		{
+			return lookup.get(code);
+		}
+	}
 	
 	Archs4ExpressionDataLoader(String fileName)
 	{
 		this.hdfExpressionFile = fileName;
 	}
 
+	/**
+	 * Allows setting a metadata object at creation time. Useful if you are reading an expression file that does not have metadata stored in it.
+	 * If you know it should match the metadata of another file, pass that metadata here.
+	 * @param fileName
+	 * @param md
+	 */
+	Archs4ExpressionDataLoader(String fileName, Archs4ExpressionMetadata md)
+	{
+		this.hdfExpressionFile = fileName;
+		this.metadata = md;
+	}
+	
+	Archs4ExpressionMetadata getMetadata()
+	{
+		return this.metadata;
+	}
+	
 	/**
 	 * Gets element coordinates for a gene (identified by index) across all samples for a tissue (identified by name).
 	 * @param tissue - The name of the tissue.
@@ -63,7 +216,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	private long[][] getElementCoordinatesForTissue(String tissue, int geneIndex)
 	{
-		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = this.metadata.getTissueTypeToIndex().get(tissue);
 		long[][] elementCoords = new long[indicesForTissue.size()][2];
 		
 		for (int i = 0; i < indicesForTissue.size(); i++)
@@ -80,12 +233,12 @@ public class Archs4ExpressionDataLoader
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 * @throws IOException
 	 */
-	public synchronized int[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
+	public synchronized double[][] getExpressionValuesforTissue(Path tissueFileName) throws IOException
 	{
 		if (expressionValuesCache.containsKey(tissueFileName.toString()))
 		{
 			logger.trace("expression values found in cache for {}", tissueFileName.toString());
-			return (int[][]) expressionValuesCache.get(tissueFileName.toString());
+			return (double[][]) expressionValuesCache.get(tissueFileName.toString());
 		}
 		else
 		{
@@ -94,10 +247,10 @@ public class Archs4ExpressionDataLoader
 			List<Integer> indicesForTissue = new ArrayList<>();
 			for (String sampleId : sampleIds)
 			{
-				indicesForTissue.add(sampleIdToIndex.get(sampleId));
+				indicesForTissue.add(this.metadata.getSampleIdToIndex().get(sampleId));
 			}
 			String tissueName = tissueFileName.getFileName().toString();
-			int[][] values = getExpressionValuesByIndices(indicesForTissue, tissueName);
+			double[][] values = getExpressionValuesBySampleIndices(indicesForTissue, tissueName);
 			expressionValuesCache.put(tissueFileName.toString(), values);
 			return values;
 		}
@@ -108,18 +261,18 @@ public class Archs4ExpressionDataLoader
 	 * @param tissue - The name of the tissue, as it is found in the dataset /meta/Sample_source_name_ch1
 	 * @return a matrix of expression values. Columns are genes, rows are samples.
 	 */
-	public synchronized int[][] getExpressionValuesforTissue(String tissue)
+	public synchronized double[][] getExpressionValuesforTissue(String tissue)
 	{
 		if (expressionValuesCache.containsKey(tissue))
 		{
 			logger.trace("expression values found in cache for {}", tissue);
-			return (int[][])expressionValuesCache.get(tissue);
+			return (double[][])expressionValuesCache.get(tissue);
 		}
 		else
 		{
 			logger.info("Nothing in expression value cache for {}, loading it now...", tissue);
-			List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
-			int[][] values = getExpressionValuesByIndices(indicesForTissue, tissue);
+			List<Integer> indicesForTissue = this.metadata.getTissueTypeToIndex().get(tissue);
+			double[][] values = getExpressionValuesBySampleIndices(indicesForTissue, tissue);
 			expressionValuesCache.put(tissue, values);
 			return values;	
 		}
@@ -138,7 +291,7 @@ public class Archs4ExpressionDataLoader
 		int i = 0;
 		for (String sampleId : sampleIds)
 		{
-			indicesForTissue[i] = sampleIdToIndex.get(sampleId);
+			indicesForTissue[i] = this.metadata.getSampleIdToIndex().get(sampleId);
 			i ++;
 		}
 		return indicesForTissue;
@@ -151,14 +304,16 @@ public class Archs4ExpressionDataLoader
 	 * @param datasubsetName
 	 * @return
 	 */
-	private synchronized int[][] getExpressionValuesByIndices(List<Integer> indices, String datasubsetName)
+	public synchronized double[][] getExpressionValuesBySampleIndices(List<Integer> indices, String datasubsetName)
 	{
-		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
-		logger.info("Tissue indices: {}", indices.toString());
-		int[][] expressionValues = new int[numberOfGenes][indices.size()];
+//		logger.info("number of samples for tissue ({}): {}", datasubsetName, indices.size());
+//		logger.info("Tissue indices: {}", indices.toString());
+		double[][] expressionValues = new double[this.metadata.getNumberOfGenes()][indices.size()];
 		
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		
+		String datasetName = determineExpressionDSName(file_id);
+		long dataset_id = H5.H5Dopen(file_id, datasetName, HDF5Constants.H5P_DEFAULT);
 		long dset_space_id = H5.H5Dget_space(dataset_id);
 		
 		boolean isFirst = true;
@@ -206,7 +361,7 @@ public class Archs4ExpressionDataLoader
 			// Select a column (for a tissue sample) from the first gene to the last.
 			long[] start = { contigBlock.get(0), 0 };
 			long[] count = { 1, 1 };
-			long[] block = { contigBlock.get(1), numberOfGenes };
+			long[] block = { contigBlock.get(1), this.metadata.getNumberOfGenes() };
 			int status = H5.H5Sselect_hyperslab(dset_space_id, op, start, null, count, block);
 			if (status < 0)
 			{
@@ -224,12 +379,41 @@ public class Archs4ExpressionDataLoader
 		// DimX is how many total indices there were for a tissue.
 		int dimx = indices.size();
 		// DimY is how many genes there were (assume all, for all tissues).
-		int dimy = numberOfGenes;		
+		int dimy = this.metadata.getNumberOfGenes();
 
 		// Now that the selections have all been made, it is FINALLY time to read the data.
 		expressionValues = HDFUtils.readData(dataset_id, dset_space_id, dimx, dimy);
 		H5.H5close();
 		return expressionValues;
+	}
+
+	private static String determineExpressionDSName(long file_id)
+	{
+		int memberCount = (int) H5.H5Gn_members(file_id, "/");
+		String[] oname = new String[memberCount];
+		int[] otype = new int[memberCount];
+		int[] ltype = new int[memberCount];
+		long[] orefs = new long[memberCount];
+		H5.H5Gget_obj_info_all(file_id, "/data", oname, otype, ltype, orefs, HDF5Constants.H5_INDEX_NAME);
+		for (int indx = 0; indx < otype.length; indx++)
+		{
+//			logger.info("{}", oname[indx]);
+			switch (H5O_type.get(otype[indx]))
+			{
+				case H5O_TYPE_DATASET:
+//					System.out.println("  Dataset: " + oname[indx]);
+					if ("expression".equals(oname[indx]))
+					{
+						return expressionDSName;
+					}
+					if ("normalized_expression".equals(oname[indx]))
+					{
+						return normExpressionDSName;
+					}
+					break;
+			}
+		}
+		return null;
 	}
 	
 	/**
@@ -238,15 +422,16 @@ public class Archs4ExpressionDataLoader
 	 * @param tissue - The name of the tissue.
 	 * @return
 	 */
-	public int[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
+	public double[] getExpressionValuesForGeneAndTissue(String gene, String tissue)
 	{
-		int geneIndex = geneIndices.get(gene);
+		int geneIndex = this.metadata.getGeneIndices().get(gene);
 		
 		long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		String dsName = determineExpressionDSName(file_id);
+		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
 		long space_id = H5.H5Dget_space(dataset_id);
 
-		List<Integer> indicesForTissue = tissueTypeToIndex.get(tissue);
+		List<Integer> indicesForTissue = this.metadata.getTissueTypeToIndex().get(tissue);
 
 		long[][] elementCoords = getElementCoordinatesForTissue(tissue, geneIndex);
 		
@@ -260,13 +445,13 @@ public class Archs4ExpressionDataLoader
 		int dimx = indicesForTissue.size();
 		int dimy = 1;
 		
-		int[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
-		int[] expressionValues = new int[dset_data.length];
+		double[][] dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
+		double[] expressionValues = new double[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
 			for (int j = 0; j < dset_data[0].length; j++)
 			{
-				int expressionValue = dset_data[i][j];
+				double expressionValue = dset_data[i][j];
 				expressionValues[i] = expressionValue;
 			}
 		}
@@ -280,20 +465,20 @@ public class Archs4ExpressionDataLoader
 	 * @param cutoff
 	 * @return
 	 */
-	public int[] getDateFilteredExpressionValuesForGene(String gene, LocalDateTime cutoff)
+	public double[] getDateFilteredExpressionValuesForGene(String gene, LocalDateTime cutoff)
 	{
-		int expressionValues[];
-		int[][] dset_data;
+		double expressionValues[];
+		double[][] dset_data;
 		// Get the indices for samples that are before the cutoff.
-		List<String> sampleIDsToUse = sampleUpdateDates.keySet().parallelStream()
-													.filter(sampleID -> sampleUpdateDates.get(sampleID).compareTo(cutoff) < 0)
+		List<String> sampleIDsToUse = this.metadata.getSampleUpdateDates().keySet().parallelStream()
+													.filter(sampleID -> this.metadata.getSampleUpdateDates().get(sampleID).compareTo(cutoff) < 0)
 													.collect(Collectors.toList());
-		int geneIndex = geneIndices.get(gene);
+		int geneIndex = this.metadata.getGeneIndices().get(gene);
 		long[][] elementCoords = new long[sampleIDsToUse.size()][2];
 		// Iterate over the sample IDs that passed the date filter.
 		for (int i = 0; i < sampleIDsToUse.size(); i++)
 		{
-			int sampleIndex = this.sampleIdToIndex.get(sampleIDsToUse.get(i));
+			int sampleIndex = this.metadata.getSampleIdToIndex().get(sampleIDsToUse.get(i));
 			
 			elementCoords[i][1] = geneIndex;
 			elementCoords[i][0] = sampleIndex;
@@ -303,19 +488,20 @@ public class Archs4ExpressionDataLoader
 		synchronized(expressionValuesCache)
 		{
 			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-			long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+			String dsName = determineExpressionDSName(file_id);
+			long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
 			long space_id = H5.H5Dget_space(dataset_id);
 			
 			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
 			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
 			H5.H5close();
 		}
-		expressionValues = new int[dset_data.length];
+		expressionValues = new double[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
 			for (int j = 0; j < dset_data[0].length; j++)
 			{
-				int expressionValue = dset_data[i][j];
+				double expressionValue = dset_data[i][j];
 				expressionValues[i] = expressionValue;
 			}
 		}
@@ -327,36 +513,37 @@ public class Archs4ExpressionDataLoader
 	 * @param gene - A gene-symbol.
 	 * @return an array of expression values, as integers.
 	 */
-	public int[] getAllExpressionValuesForGene(String gene)
+	public double[] getAllExpressionValuesForGene(String gene)
 	{
-		int expressionValues[];
-		int[][] dset_data;
-		int geneIndex = geneIndices.get(gene);
+		double expressionValues[];
+		double[][] dset_data;
+		int geneIndex = this.metadata.getGeneIndices().get(gene);
 		// Iterate over ALL tissues.
-		long[][] elementCoords = new long[this.indexOfTissues.keySet().size()][2];
+		long[][] elementCoords = new long[this.metadata.getIndexOfTissues().keySet().size()][2];
 		
-		for (int i = 0; i < this.indexOfTissues.keySet().size(); i++)
+		for (int i = 0; i < this.metadata.getIndexOfTissues().keySet().size(); i++)
 		{
 			elementCoords[i][1] = geneIndex;
 			elementCoords[i][0] = i;
 		}
-		int dimx = this.indexOfTissues.keySet().size();
+		int dimx = this.metadata.getIndexOfTissues().keySet().size();
 		int dimy = 1;
 		synchronized(expressionValuesCache)
 		{
 			long file_id = H5.H5Fopen(hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
-			long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+			String dsName = determineExpressionDSName(file_id);
+			long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
 			long space_id = H5.H5Dget_space(dataset_id);
 			int status = H5.H5Sselect_elements(space_id, HDF5Constants.H5S_SELECT_SET, elementCoords.length, elementCoords);
 			dset_data = HDFUtils.readData(dataset_id, space_id, dimx, dimy);
 			H5.H5close();
 		}
-		expressionValues = new int[dset_data.length];
+		expressionValues = new double[dset_data.length];
 		for (int i = 0; i < dset_data.length; i ++)
 		{
 			for (int j = 0; j < dset_data[0].length; j++)
 			{
-				int expressionValue = dset_data[i][j];
+				double expressionValue = dset_data[i][j];
 				expressionValues[i] = expressionValue;
 			}
 		}
@@ -368,23 +555,23 @@ public class Archs4ExpressionDataLoader
 	 */
 	public void loadSampleIndices()
 	{
-		this.sampleIdToIndex = new HashMap<>();
+		this.metadata.setSampleIdToIndex(new HashMap<>());
 		
-		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, this.numberOfSamples);
-		StringBuffer[] str_data_dates = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleLastUpdatedDSName, this.numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleIdDSName, this.metadata.getNumberOfSamples());
+		StringBuffer[] str_data_dates = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.sampleLastUpdatedDSName, this.metadata.getNumberOfSamples());
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd yyyy");
 		
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx <  str_data.length; indx++)
 		{
 			String sampleId = str_data[indx].toString();
-			this.sampleIdToIndex.put(sampleId, indx);
-			this.sampleIndexToID.put(indx, sampleId);
+			this.metadata.getSampleIdToIndex().put(sampleId, indx);
+			this.metadata.getSampleIndexToID().put(indx, sampleId);
 			
 			LocalDateTime ldt = LocalDate.parse( str_data_dates[indx].toString(), formatter).atStartOfDay();
-			this.sampleUpdateDates.put(sampleId, ldt);
+			this.metadata.getSampleUpdateDates().put(sampleId, ldt);
 		}
-		logger.info("Number of Sample IDs loaded: {}", this.sampleIdToIndex.size());
+		logger.info("Number of Sample IDs loaded: {}", this.metadata.getSampleIdToIndex().size());
 	}
 
 	/**
@@ -392,15 +579,15 @@ public class Archs4ExpressionDataLoader
 	 */
 	public void loadGeneNames()
 	{
-		this.geneIndices = new HashMap<>();
-		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.genesDSName, this.numberOfGenes);
+		this.metadata.setGeneIndices(new HashMap<>());
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile, Archs4ExpressionDataLoader.genesDSName, this.metadata.getNumberOfGenes());
 		logger.info("Number of elements: {}", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
-			geneIndices.put(str_data[indx].toString(), indx);
-			geneIndicesToNames.put(indx, str_data[indx].toString());
+			this.metadata.getGeneIndices().put(str_data[indx].toString(), indx);
+			this.metadata.getGeneIndicesToNames().put(indx, str_data[indx].toString());
 		}
-		logger.info("Number of genes loaded: {}", geneIndices.size());
+		logger.info("Number of genes loaded: {}", this.metadata.getGeneIndices().size());
 	}
 	
 	/**
@@ -409,7 +596,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Set<String> getTissueTypes()
 	{
-		return tissueTypes;
+		return this.metadata.getTissueTypes();
 	}
 	
 	/**
@@ -417,29 +604,29 @@ public class Archs4ExpressionDataLoader
 	 */
 	public void loadTissueTypeNames()
 	{
-		this.tissueTypeToIndex = new HashMap<>();
-		this.indexOfTissues = new HashMap<>();
+		this.metadata.setTissueTypeToIndex(new HashMap<>());
+		this.metadata.setIndexOfTissues(new HashMap<>());
 
-		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile,tissueDSName, numberOfSamples);
+		StringBuffer[] str_data = HDFUtils.readDataSet(this.hdfExpressionFile,tissueDSName, this.metadata.getNumberOfSamples());
 		logger.info("Number of elements: ", str_data.length);
 		for (int indx = 0; indx < str_data.length; indx++)
 		{
 			String tissueType = str_data[indx].toString();
-			tissueTypes.add(tissueType);
-			indexOfTissues.put(indx, tissueType);
-			if (tissueTypeToIndex.containsKey(tissueType))
+			this.metadata.getTissueTypes().add(tissueType);
+			this.metadata.getIndexOfTissues().put(indx, tissueType);
+			if (this.metadata.getTissueTypeToIndex().containsKey(tissueType))
 			{
-				tissueTypeToIndex.get(tissueType).add(indx);
+				this.metadata.getTissueTypeToIndex().get(tissueType).add(indx);
 			}
 			else
 			{
 				List<Integer> list = new ArrayList<>();
 				list.add(indx);
-				tissueTypeToIndex.put(tissueType, list);
+				this.metadata.getTissueTypeToIndex().put(tissueType, list);
 			}
 		}
 
-		logger.info("Number of distinct elements: {}", tissueTypes.size());
+		logger.info("Number of distinct elements: {}", this.metadata.getTissueTypes().size());
 	}
 	
 	/**
@@ -448,7 +635,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Map<Integer, String> getIndexOfTissues()
 	{
-		return indexOfTissues;
+		return this.metadata.getIndexOfTissues();
 	}
 
 	/**
@@ -457,7 +644,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Map<String, List<Integer>> getTissueTypeToIndex()
 	{
-		return tissueTypeToIndex;
+		return this.metadata.getTissueTypeToIndex();
 	}
 
 
@@ -476,7 +663,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Map<String, Integer> getGeneIndices()
 	{
-		return geneIndices;
+		return this.metadata.getGeneIndices();
 	}
 	
 	/**
@@ -490,12 +677,12 @@ public class Archs4ExpressionDataLoader
 		long file_id = H5.H5Fopen(this.hdfExpressionFile, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT);
 		long[] dims = new long[2];
 		long[] maxdims = new long[2];
-		
-		long dataset_id = H5.H5Dopen(file_id, expressionDSName, HDF5Constants.H5P_DEFAULT);
+		String dsName = determineExpressionDSName(file_id);
+		long dataset_id = H5.H5Dopen(file_id, dsName, HDF5Constants.H5P_DEFAULT);
 		long space_id = H5.H5Dget_space(dataset_id);
 		H5.H5Sget_simple_extent_dims(space_id, dims, maxdims);
-		numberOfSamples = (int) dims[0]; // You should get ~167k here.
-		numberOfGenes = (int) dims[1]; // You should get ~35k here.
+		this.metadata.setNumberOfSamples((int) dims[0]); // You should get ~167k here.
+		this.metadata.setNumberOfGenes((int) dims[1]); // You should get ~35k here.
 	}
 	
 	/**
@@ -515,7 +702,7 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Map<Integer, String> getGeneIndicesToNames()
 	{
-		return geneIndicesToNames;
+		return this.metadata.getGeneIndicesToNames();
 	}
 
 	/**
@@ -524,6 +711,6 @@ public class Archs4ExpressionDataLoader
 	 */
 	public Map<Integer, String> getSampleIndexToID()
 	{
-		return sampleIndexToID;
+		return this.metadata.getSampleIndexToID();
 	}
 }

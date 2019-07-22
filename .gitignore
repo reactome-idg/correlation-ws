@@ -35,3 +35,4 @@ target/
 
 .attach_pid*
 
+.Rproj.user

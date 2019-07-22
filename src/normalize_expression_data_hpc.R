@@ -3,21 +3,33 @@
 # Author: sshorser
 ###############################################################################
 
+#.libPaths("/u/sshorser/R/lib")
+#options(repos = c(CRAN = "https://cran.rstudio.com"))
+#options(BIOCONDUCTOR_ONLINE_VERSION_DIAGNOSIS=FALSE)
+#options(warn=-1)
+# library(BiocManager)
 # Set up packages
-packages <- c("rhdf5", "preprocessCore")
-if (length(setdiff(packages, rownames(installed.packages()))) > 0)
-{
-  print("Install required packages")
-  #source("https://bioconductor.org/biocLite.R")
-  
-  if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager")
-  BiocManager::install()
-  
-  biocLite("rhdf5")
-  biocLite("preprocessCore")
-}
+#packages <- c("rhdf5", "preprocessCore")
+#if (length(setdiff(packages, rownames(installed.packages()))) > 0)
+#{
+#  print("Install required packages")
 
+#  if (!requireNamespace("BiocManager", quietly = TRUE))
+#  {
+#    install.packages("BiocManager", lib="/u/sshorser/R/lib", repos = 'https://cran.rstudio.com/')
+#  }
+#  library("BiocManager")
+#  BiocManager::install()
+#  BiocManager::install(c("rhdf5", "preprocessCore"))
+
+#    install.packages("rhdf5", lib="/u/sshorser/R/lib", repos = 'https://cran.rstudio.com/')
+#    install.packages("preprocessCore", lib="/u/sshorser/R/lib", repos = 'https://cran.rstudio.com/')
+#  source("https://bioconductor.org/biocLite.R")
+#  biocLite("rhdf5", lib="/u/sshorser/R/lib")
+#  biocLite("preprocessCore", lib="/u/sshorser/R/lib")
+#}
+
+library("sva")
 library("rhdf5")
 library("preprocessCore")
 
@@ -62,17 +74,32 @@ class(genes)
 
 # Need to loop through samples, normalizing them, and then write a new HDF file.
 length(genes)
+print("correcting bad value")
+# The value at 7045,166150 is -9, for some reason. No other negative numbers, so we'll just set this to 0.
+expression[7045,166150] <- 0
 
-normalized <- normalize.quantiles(expression[,1:50000],copy=FALSE)
+# prepare for batch correction (these are used later)
+series <- meta$Sample_series_id
+batchid <- match(series, unique(series))
+
+# normalized <- normalize.quantiles(expression[,1:100])
+print("applying log2 transformation")
+expression <- log2(expression+1)
+print("normalizing expression values")
+normalized <- normalize.quantiles(expression)
+# Now, do batch correction
+print("performing batch correction")
+batchCorrectedNormalized <- ComBat(dat=normalized, batch=batchid, par.prior=TRUE, prior.plots=FALSE)
+
 # cleanup before attempting to create new file.
 if(file.exists(output_file))
 {
   print("Removing pre-existing output file.")
   file.remove(output_file)
 }
-print(paste("Writing to ",output_file))
+
 h5createFile(output_file)
 h5createGroup(output_file,"data")
-h5createDataset(output_file, "data/normalized_expression", dim(normalized), storage.mode = storage.mode(normalized), fillValue = 0.0, chunk = c(500, 500), level = 7)
+h5createDataset(output_file, "data/normalized_expression", dim(batchCorrectedNormalized), storage.mode=storage.mode(batchCorrectedNormalized), fillValue=0.0, chunk=c(200,200), level=6)
 h5write(normalized, file=output_file, "data/normalized_expression")
 h5closeAll()

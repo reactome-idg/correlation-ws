@@ -34,16 +34,21 @@ public class CorrelationVerification
 	
 	public static void main(String[] args) throws IOException
 	{
+		// CLI args:
 		String pathToHDFFile = args[0];
-		int numPairs = Integer.parseInt(args[1]);
+		String pathToNormalizedHDFFile = args[1];
+		int numPairs = Integer.parseInt(args[2]);
+		String pathToCorrelationFile = args[3];
+
 		Map<String, Double> calculatedCorrelations = Collections.synchronizedMap(new HashMap<>(numPairs));
 		// First, we need to read the HDF file.
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(pathToHDFFile);
+		Archs4ExpressionDataLoader normalizedLoader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(pathToNormalizedHDFFile, false, loader);
 		loader.loadMetaData();
 		StringBuffer buf = new StringBuffer();
 		buf.append("Gene Pair").append("\t").append("Old Correlation (extracted from correlation file)").append("\t").append("New Correlation (calculated from expression data in HDF)\n");
 		logger.info("Number of correlations to calculate: {}", numPairs);
-		String pathToCorrelationFile = args[2];
+		
 		Map<String, Integer> geneNamesToIndices = new HashMap<>();
 		Map<Integer, String> geneIndicesToNames = new HashMap<>();
 		// read the file. Start by reading the header to get the indices.
@@ -96,10 +101,11 @@ public class CorrelationVerification
 			}
 //			logger.info("Two genes selected: {} and {}", geneSymbol1, geneSymbol2);
 			// Now that we have two genes, compute cross-tissue correlations.
-			GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator(geneSymbol1, geneSymbol2, loader);
+			GenePairCorrelationCalculator calculator = new GenePairCorrelationCalculator(geneSymbol1, geneSymbol2, normalizedLoader);
 			double correlation;
 			// Need to do the calculation in a synchronized block, because reading from HDF cannot be safely done in a multi-threaded way.
 			correlation = calculator.calculateCrossTissueCorrelationFilteredByDate(cutoff);
+//			correlation = calculator.calculateCrossTissueCorrelation();
 //				logger.info("Correlation between {} and {} is: {}", geneSymbol1, geneSymbol2, correlation);
 			calculatedCorrelations.put(DataRepository.generateKey(geneSymbol1, geneSymbol2), correlation);
 			int count = numCalculated.incrementAndGet();

@@ -16,9 +16,9 @@ public class HDFUtils
 	 * @param dimy - The size of the y-dimension of the portion to read.
 	 * @return An array that is <code>dimx</code> x <code>dimy</code>. 
 	 */
-	public static int[][] readData(long dataset_id, long space_id, int dimx, int dimy)
+	public static double[][] readData(long dataset_id, long space_id, int dimx, int dimy)
 	{
-		int[][] dset_data = new int[dimx][dimy];
+		double[][] dset_data = new double[dimx][dimy];
 		
 		long[] dims = new long[2];
 		dims[0] = dimx;

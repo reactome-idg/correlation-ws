@@ -16,6 +16,11 @@
 	</properties>
 
 	<dependencies>
+<!-- 		<dependency>
+			<groupId>org.renjin</groupId>
+			<artifactId>renjin-script-engine</artifactId>
+			<version>RELEASE</version>
+		</dependency> -->
 		<!-- https://mvnrepository.com/artifact/junit/junit -->
 		<dependency>
 			<groupId>junit</groupId>
@@ -114,4 +119,11 @@
 		</dependency>
 
 	</dependencies>
+<!-- 	<repositories>
+		<repository>
+			<id>bedatadriven</id>
+			<name>bedatadriven public repo</name>
+			<url>https://nexus.bedatadriven.com/content/groups/public/</url>
+		</repository>
+	</repositories> -->
 </project>

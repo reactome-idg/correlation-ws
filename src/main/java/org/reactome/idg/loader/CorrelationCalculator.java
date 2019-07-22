@@ -27,7 +27,7 @@ abstract class CorrelationCalculator
 	 * @param numberOfSamples - the total number of samples in the result.
 	 * @return
 	 */
-	protected static double[] getSampleValuesForGene(int[][] sampleValues, int geneIndex, int numberOfSamples )
+	protected static double[] getSampleValuesForGene(double[][] sampleValues, int geneIndex, int numberOfSamples )
 	{
 		double[] geneSamples = new double[numberOfSamples];
 		for (int sampleIndex = 0; sampleIndex < numberOfSamples; sampleIndex++)

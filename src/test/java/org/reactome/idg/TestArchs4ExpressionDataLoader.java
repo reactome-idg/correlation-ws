@@ -34,12 +34,12 @@ public class TestArchs4ExpressionDataLoader
 	public void testH5LoaderGetExpressionsForGeneAndTissue()
 	{
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
-		int expressionValues[] = loader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
+		double expressionValues[] = loader.getExpressionValuesForGeneAndTissue("A1BG", "HeLa ELAVL1/HuR siRNA1 5d");
 		assertNotNull(expressionValues);
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
 		Arrays.stream(expressionValues).forEach(x -> System.out.print(x+", "));
-		assertEquals(124, expressionValues[0]);
+		assertEquals(124, expressionValues[0], 0.00000000001);
 		System.out.println("\n");
 		
 		
@@ -48,7 +48,7 @@ public class TestArchs4ExpressionDataLoader
 		assertTrue(expressionValues.length > 0);
 		System.out.println(expressionValues.length);
 		Arrays.stream(expressionValues).forEach(x -> System.out.print(x+", "));
-		assertEquals(119,  expressionValues[0]);
+		assertEquals(119,  expressionValues[0], 0.00000000001);
 		System.out.println("\n");
 
 		expressionValues = loader.getExpressionValuesForGeneAndTissue("A1BG", "Heart");
@@ -121,7 +121,7 @@ public class TestArchs4ExpressionDataLoader
 	{
 		LocalDateTime start;
 		LocalDateTime end;
-		int[][] expressionValues;
+		double[][] expressionValues;
 		start = LocalDateTime.now();
 		expressionValues = loader.getExpressionValuesforTissue(tissueName);
 		end = LocalDateTime.now();
@@ -179,7 +179,7 @@ public class TestArchs4ExpressionDataLoader
 	{
 		Archs4ExpressionDataLoader loader = Archs4ExpressionDataLoaderFactory.buildInstanceForHDFFile(PATH_TO_HDF);
 		int[] sampleIndices = loader.getSampleIndicesForTissue(Paths.get("src/test/resources/heart.txt"));
-		int[][] expressionValues = loader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
+		double[][] expressionValues = loader.getExpressionValuesforTissue(Paths.get("src/test/resources/heart.txt"));
 		System.out.println("Size: " + expressionValues.length + " x " + expressionValues[0].length);
 
 		System.out.print("\t\t");

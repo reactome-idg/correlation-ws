@@ -43,7 +43,7 @@ public class GenePairCorrelationMatrixCalculator extends CorrelationCalculator
 	{
 		// We're assuming that "tissues" are names of files with tissue-specific sample IDs.
 		// outer index is sample, inner index is gene.
-		int[][] sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
+		double[][] sampleValues = this.dataLoader.getExpressionValuesforTissue(Paths.get(this.tissue));
 		int numberOfGenes = this.dataLoader.getGeneIndices().size();
 		RealMatrix corMatrix = new Array2DRowRealMatrix(numberOfGenes, numberOfGenes);
 //		ExecutorService execService = Executors.newCachedThreadPool();

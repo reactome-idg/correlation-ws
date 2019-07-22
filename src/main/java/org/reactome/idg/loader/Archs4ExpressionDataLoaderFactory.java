@@ -25,7 +25,7 @@ public class Archs4ExpressionDataLoaderFactory
 	 * @param pathToFile
 	 * @return
 	 */
-	public static Archs4ExpressionDataLoader buildInstanceForHDFFile(String pathToFile)
+	public static Archs4ExpressionDataLoader buildInstanceForHDFFile(String pathToFile, boolean loadMetadata, Archs4ExpressionDataLoader otherLoader)
 	{
 		if (loaders.containsKey(pathToFile))
 		{
@@ -34,10 +34,26 @@ public class Archs4ExpressionDataLoaderFactory
 		else
 		{
 			Archs4ExpressionDataLoader loader = new Archs4ExpressionDataLoader(pathToFile);
-			loader.loadCounts();
-			loader.loadMetaData();
+			if (loadMetadata)
+			{
+				loader.loadCounts();
+				loader.loadMetaData();
+			}
+			else
+			{
+				if(otherLoader != null)
+				{
+					loader.metadata = otherLoader.getMetadata();
+				}
+			}
 			loaders.put(pathToFile, loader);
 			return loader;
 		}
 	}
+	
+	public static Archs4ExpressionDataLoader buildInstanceForHDFFile(String pathToFile)
+	{
+		return buildInstanceForHDFFile(pathToFile, true, null);
+	}
+	
 }
