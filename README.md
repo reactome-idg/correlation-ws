@@ -8,3 +8,4 @@ To install it, run this command:
 ```bash
 mvn install:install-file -Dfile=./jarhdf5-1.10.5.jar -DgroupId=hdf5 -DartifactId=jarhdf5 -Dversion=1.10.5 -Dpackaging=jar
 ```
+**Note:** This project has been deprecated. Features required by the Reactome-idg portal project have been migrated into the idg-fi-network-ml project.
