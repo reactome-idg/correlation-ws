@@ -12,7 +12,7 @@
 		<powermock.version>2.0.2</powermock.version>
 		<spring.version>5.1.7.RELEASE</spring.version>
 		<hibernate.version>5.4.2.Final</hibernate.version>
-		<mysql.driver.version>8.0.16</mysql.driver.version>
+		<mysql.driver.version>8.0.28</mysql.driver.version>
 	</properties>
 
 	<dependencies>
